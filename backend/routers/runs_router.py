@@ -1,14 +1,16 @@
+import asyncio
 from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
-from backend.database import get_db
-from backend.models import Run, Metrics
+from backend.database import get_db, SessionLocal
+from backend.models import Run, Metrics, PrometheusSample
 from backend.schemas import RunCreate, RunOut, RunListItem
 from backend.services.yaml_io import read_driver, read_workload
 from backend.services.result_parser import parse_result_file
 from backend.services.omb_runner import OmbRunner
+from backend.services.prometheus_client import query_batch_size, query_bytes_in, query_bytes_out
 
 router = APIRouter(prefix="/api/runs", tags=["runs"])
 
@@ -26,11 +28,9 @@ def get_runner() -> OmbRunner:
 
 async def _finish_run(run_id: int, runner: OmbRunner) -> None:
     """Background task: poll until OMB exits, then parse results and update DB."""
-    import asyncio
     while not runner.is_done(run_id):
         await asyncio.sleep(2)
 
-    from backend.database import SessionLocal
     async with SessionLocal() as db:
         run = await db.get(Run, run_id)
         if run is None:
@@ -50,6 +50,42 @@ async def _finish_run(run_id: int, runner: OmbRunner) -> None:
             run.status = "failed"
 
         run.completed_at = datetime.utcnow()
+        await db.commit()
+
+
+async def _poll_prometheus(run_id: int, runner: OmbRunner, started_at: datetime) -> None:
+    """Background task: poll Prometheus every 10 s while the run is active."""
+    while not runner.is_done(run_id):
+        t = int((datetime.utcnow() - started_at).total_seconds())
+        batch, b_in, b_out = await asyncio.gather(
+            query_batch_size(),
+            query_bytes_in(),
+            query_bytes_out(),
+        )
+        async with SessionLocal() as db:
+            db.add(PrometheusSample(
+                run_id=run_id, t=t,
+                batch_size_bytes=batch,
+                bytes_in_per_sec=b_in,
+                bytes_out_per_sec=b_out,
+            ))
+            await db.commit()
+        await asyncio.sleep(10)
+
+    # One final sample captured after the run ends
+    t = int((datetime.utcnow() - started_at).total_seconds())
+    batch, b_in, b_out = await asyncio.gather(
+        query_batch_size(),
+        query_bytes_in(),
+        query_bytes_out(),
+    )
+    async with SessionLocal() as db:
+        db.add(PrometheusSample(
+            run_id=run_id, t=t,
+            batch_size_bytes=batch,
+            bytes_in_per_sec=b_in,
+            bytes_out_per_sec=b_out,
+        ))
         await db.commit()
 
 
@@ -88,6 +124,7 @@ async def create_run(
 
     await runner.start(run.id)
     background_tasks.add_task(_finish_run, run.id, runner)
+    background_tasks.add_task(_poll_prometheus, run.id, runner, run.started_at)
 
     # Re-fetch with selectinload so Pydantic can access the metrics relationship
     # without triggering a lazy-load outside the async session greenlet.

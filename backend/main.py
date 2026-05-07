@@ -5,7 +5,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from backend.database import init_db
 from backend.services.omb_runner import OmbRunner
-from backend.routers import config_router, runs_router, ws_router
+from backend.routers import config_router, runs_router, ws_router, prometheus_router
 
 STATIC_DIR = Path(__file__).parent.parent / "frontend" / "dist"
 
@@ -22,6 +22,7 @@ app = FastAPI(title="OMB UI", lifespan=lifespan)
 app.include_router(config_router.router)
 app.include_router(runs_router.router)
 app.include_router(ws_router.router)
+app.include_router(prometheus_router.router)
 
 # Serve React SPA — must come after API routes
 if STATIC_DIR.exists():

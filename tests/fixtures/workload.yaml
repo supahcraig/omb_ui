@@ -1,0 +1,11 @@
+topics: 1
+partitionsPerTopic: 10
+messageSize: 1024
+payloadFile: "payload/payload-1Kb.data"
+subscriptionsPerTopic: 1
+consumerPerSubscription: 1
+producersPerTopic: 10
+producerRate: 10000
+consumerBacklogSizeGB: 0
+testDurationMinutes: 20
+warmupDurationMinutes: 5

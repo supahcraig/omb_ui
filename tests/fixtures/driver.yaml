@@ -1,0 +1,20 @@
+driverClass: io.openmessaging.benchmark.driver.redpanda.RedpandaBenchmarkDriver
+replicationFactor: 3
+reset: true
+topicConfig: |
+commonConfig: |
+  bootstrap.servers=broker:9092
+  sasl.jaas.config=org.apache.kafka.common.security.scram.ScramLoginModule required username='user' password='pass';
+  security.protocol=SASL_SSL
+  sasl.mechanism=SCRAM-SHA-256
+  request.timeout.ms=120000
+producerConfig: |
+  acks=all
+  linger.ms=1
+consumerConfig: |
+  group.id=benchGroup
+  auto.offset.reset=earliest
+  enable.auto.commit=false
+  fetch.max.wait.ms=50
+  fetch.min.bytes=1
+  max.partition.fetch.bytes=10485760

@@ -89,6 +89,12 @@ async def create_run(
     await runner.start(run.id)
     background_tasks.add_task(_finish_run, run.id, runner)
 
+    # Re-fetch with selectinload so Pydantic can access the metrics relationship
+    # without triggering a lazy-load outside the async session greenlet.
+    result = await db.execute(
+        select(Run).where(Run.id == run.id).options(selectinload(Run.metrics))
+    )
+    run = result.scalar_one()
     return RunOut.model_validate(run)
 
 

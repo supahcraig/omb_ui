@@ -101,3 +101,4 @@ async def test_poll_prometheus_writes_final_sample():
     assert len(samples) == 1
     assert samples[0].batch_size_bytes == pytest.approx(131072.0)
     assert samples[0].bytes_in_per_sec == pytest.approx(10485760.0)
+    assert samples[0].bytes_out_per_sec == pytest.approx(3145728.0)

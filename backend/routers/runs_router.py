@@ -56,6 +56,27 @@ async def _finish_run(run_id: int, runner: OmbRunner) -> None:
 async def _poll_prometheus(run_id: int, runner: OmbRunner, started_at: datetime) -> None:
     """Background task: poll Prometheus every 10 s while the run is active."""
     while not runner.is_done(run_id):
+        try:
+            t = int((datetime.utcnow() - started_at).total_seconds())
+            batch, b_in, b_out = await asyncio.gather(
+                query_batch_size(),
+                query_bytes_in(),
+                query_bytes_out(),
+            )
+            async with SessionLocal() as db:
+                db.add(PrometheusSample(
+                    run_id=run_id, t=t,
+                    batch_size_bytes=batch,
+                    bytes_in_per_sec=b_in,
+                    bytes_out_per_sec=b_out,
+                ))
+                await db.commit()
+        except Exception:
+            pass
+        await asyncio.sleep(10)
+
+    # One final sample captured after the run ends
+    try:
         t = int((datetime.utcnow() - started_at).total_seconds())
         batch, b_in, b_out = await asyncio.gather(
             query_batch_size(),
@@ -70,23 +91,8 @@ async def _poll_prometheus(run_id: int, runner: OmbRunner, started_at: datetime)
                 bytes_out_per_sec=b_out,
             ))
             await db.commit()
-        await asyncio.sleep(10)
-
-    # One final sample captured after the run ends
-    t = int((datetime.utcnow() - started_at).total_seconds())
-    batch, b_in, b_out = await asyncio.gather(
-        query_batch_size(),
-        query_bytes_in(),
-        query_bytes_out(),
-    )
-    async with SessionLocal() as db:
-        db.add(PrometheusSample(
-            run_id=run_id, t=t,
-            batch_size_bytes=batch,
-            bytes_in_per_sec=b_in,
-            bytes_out_per_sec=b_out,
-        ))
-        await db.commit()
+    except Exception:
+        pass
 
 
 @router.get("", response_model=list[RunListItem])

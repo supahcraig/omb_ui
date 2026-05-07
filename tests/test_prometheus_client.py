@@ -47,3 +47,11 @@ async def test_query_returns_none_on_nan():
     with patch("httpx.AsyncClient", return_value=_mock_httpx_client(payload)):
         result = await query_batch_size("http://localhost:9644")
     assert result is None
+
+
+@pytest.mark.asyncio
+async def test_query_returns_none_on_inf():
+    payload = {"data": {"result": [{"value": [0, "+Inf"]}]}}
+    with patch("httpx.AsyncClient", return_value=_mock_httpx_client(payload)):
+        result = await query_batch_size("http://localhost:9644")
+    assert result is None

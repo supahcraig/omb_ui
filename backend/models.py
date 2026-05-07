@@ -44,7 +44,7 @@ class Metrics(Base):
 class PrometheusSample(Base):
     __tablename__ = "prometheus_samples"
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    run_id: Mapped[int] = mapped_column(Integer, ForeignKey("runs.id"), index=True)
+    run_id: Mapped[int] = mapped_column(Integer, ForeignKey("runs.id", ondelete="CASCADE"), index=True)
     t: Mapped[int] = mapped_column(Integer)  # seconds since run started_at
     batch_size_bytes: Mapped[float | None] = mapped_column(Float, nullable=True)
     bytes_in_per_sec: Mapped[float | None] = mapped_column(Float, nullable=True)

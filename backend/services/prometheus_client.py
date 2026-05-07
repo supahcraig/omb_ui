@@ -1,3 +1,5 @@
+import math
+
 import httpx
 from backend.config import settings
 
@@ -12,7 +14,7 @@ async def _instant_query(url: str | None, query: str) -> float | None:
             if not results:
                 return None
             value = float(results[0]["value"][1])
-            if value != value:  # NaN check
+            if not math.isfinite(value):
                 return None
             return value
     except Exception:

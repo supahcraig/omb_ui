@@ -77,5 +77,5 @@ class OmbRunner:
         if state and not state["done"]:
             state["process"].terminate()
             await asyncio.sleep(0.5)
-            if not state["done"]:
+            if state["process"].returncode is None:
                 state["process"].kill()

@@ -106,6 +106,7 @@ async def list_runs(db: AsyncSession = Depends(get_db)):
         items.append(RunListItem(
             id=r.id, name=r.name, status=r.status,
             started_at=r.started_at, completed_at=r.completed_at,
+            sweep_id=r.sweep_id,
             publish_rate_avg=r.metrics.publish_rate_avg if r.metrics else None,
             publish_latency_p99=r.metrics.publish_latency_p99 if r.metrics else None,
             publish_latency_p999=r.metrics.publish_latency_p999 if r.metrics else None,

@@ -1,9 +1,18 @@
-function App() {
+import { Routes, Route, Navigate } from 'react-router-dom'
+import Layout from './components/Layout'
+import NewRunPage from './pages/NewRun'
+import ResultsPage from './pages/Results'
+import RunDetailPage from './pages/RunDetail'
+
+export default function App() {
   return (
-    <div className="min-h-screen bg-background">
-      <h1 className="text-2xl font-bold p-4">OMB UI</h1>
-    </div>
+    <Layout>
+      <Routes>
+        <Route path="/" element={<Navigate to="/runs/new" replace />} />
+        <Route path="/runs/new" element={<NewRunPage />} />
+        <Route path="/runs" element={<ResultsPage />} />
+        <Route path="/runs/:id" element={<RunDetailPage />} />
+      </Routes>
+    </Layout>
   )
 }
-
-export default App

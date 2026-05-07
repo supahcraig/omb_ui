@@ -4,6 +4,8 @@ import { Button } from '@/components/ui/button'
 import { api } from '@/api/client'
 import MetricsTiles from './MetricsTiles'
 import LatencyBars from './LatencyBars'
+import ThroughputChart from './ThroughputChart'
+import PrometheusCharts from './PrometheusCharts'
 
 export default function RunDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -22,7 +24,7 @@ export default function RunDetailPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold">Run #{run.id} {run.name ? `— ${run.name}` : ''}</h1>
+          <h1 className="text-xl font-semibold">Run #{run.id}{run.name ? ` — ${run.name}` : ''}</h1>
           <p className="text-slate-400 text-sm mt-1">
             {new Date(run.started_at).toLocaleString()}
             {run.completed_at && ` → ${new Date(run.completed_at).toLocaleString()}`}
@@ -34,13 +36,18 @@ export default function RunDetailPage() {
         </Link>
       </div>
 
+      {run.metrics && <MetricsTiles metrics={run.metrics} />}
+
+      {run.metrics?.throughput_timeseries && (
+        <ThroughputChart timeseries={run.metrics.throughput_timeseries} />
+      )}
+
+      {run.status === 'completed' && <PrometheusCharts runId={run.id} />}
+
       {run.metrics && (
-        <>
-          <MetricsTiles metrics={run.metrics} />
-          <div className="bg-slate-900 border border-slate-700 rounded-lg p-5">
-            <LatencyBars metrics={run.metrics} />
-          </div>
-        </>
+        <div className="bg-slate-900 border border-slate-700 rounded-lg p-5">
+          <LatencyBars metrics={run.metrics} />
+        </div>
       )}
 
       {run.status === 'running' && (
@@ -49,7 +56,6 @@ export default function RunDetailPage() {
         </div>
       )}
 
-      {/* Config snapshot */}
       <details className="bg-slate-900 border border-slate-700 rounded-lg">
         <summary className="px-5 py-3 cursor-pointer text-sm text-slate-400 hover:text-white">
           Config used for this run ▸

@@ -13,7 +13,7 @@ class Run(Base):
     driver_config: Mapped[dict] = mapped_column(JSON)
     workload_config: Mapped[dict] = mapped_column(JSON)
     sweep_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    metrics: Mapped["Metrics | None"] = relationship("Metrics", back_populates="run", uselist=False)
+    metrics: Mapped["Metrics | None"] = relationship("Metrics", back_populates="run", uselist=False, cascade="all, delete-orphan")
 
 class Metrics(Base):
     __tablename__ = "metrics"

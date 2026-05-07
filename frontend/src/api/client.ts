@@ -1,4 +1,4 @@
-import type { ConfigPayload, Run, RunListItem } from './types'
+import type { ConfigPayload, Run, RunListItem, PrometheusSample } from './types'
 
 const base = '/api'
 
@@ -23,4 +23,7 @@ export const api = {
     request<Run>('/runs', { method: 'POST', body: JSON.stringify({ name }) }),
   stopRun: (id: number) =>
     request<void>(`/runs/${id}`, { method: 'DELETE' }),
+
+  getRunPrometheus: (id: number) =>
+    request<PrometheusSample[]>(`/runs/${id}/prometheus`),
 }

@@ -78,3 +78,10 @@ export interface RunListItem {
   publish_latency_p999: number | null
   end_to_end_latency_p99: number | null
 }
+
+export interface PrometheusSample {
+  t: number
+  batch_size_bytes: number | null
+  bytes_in_per_sec: number | null
+  bytes_out_per_sec: number | null
+}

@@ -102,7 +102,7 @@ async def _run_sweep(sweep_id: int, runner: OmbRunner) -> None:
                 run_obj = await db.get(Run, run_id)
                 final_status = run_obj.status if run_obj else "failed"
 
-            if final_status in ("failed", "cancelled"):
+            if final_status in ("failed", "cancelled", "running"):
                 continue
 
             async with SessionLocal() as db:
@@ -192,6 +192,7 @@ async def cancel_sweep(sweep_id: int, db: AsyncSession = Depends(get_db)) -> dic
     for run in sweep.runs:
         if run.status == "running":
             await runner.stop(run.id)
+            run.status = "cancelled"
         elif run.status == "pending":
             run.status = "cancelled"
 

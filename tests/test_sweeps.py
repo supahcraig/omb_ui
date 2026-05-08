@@ -61,7 +61,7 @@ async def test_post_sweeps_creates_cartesian_product():
     mock_runner.start = AsyncMock()
 
     with patch("backend.routers.sweeps_router._runner", mock_runner), \
-         patch("backend.routers.sweeps_router._run_sweep", new_callable=lambda: lambda *a, **kw: asyncio.sleep(0)):
+         patch("backend.routers.sweeps_router._run_sweep", new_callable=AsyncMock):
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
             resp = await client.post("/api/sweeps", json=body)
 
@@ -150,8 +150,10 @@ async def test_delete_sweep_cancels_pending_runs():
     mock_runner.stop.assert_called_once_with(run1_id)
 
     async with SessionLocal() as db:
+        r1 = await db.get(Run, run1_id)
         r2 = await db.get(Run, run2_id)
         sw = await db.get(Sweep, sweep_id)
+    assert r1.status == "cancelled"
     assert r2.status == "cancelled"
     assert sw.status == "failed"
 

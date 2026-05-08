@@ -91,7 +91,7 @@ export interface PrometheusSample {
 export interface Sweep {
   id: number
   name: string
-  status: 'running' | 'completed' | 'failed'
+  status: 'running' | 'completed' | 'failed' | 'cancelled'
   parameter_axes: Record<string, string[]>
   cooldown_seconds: number
   started_at: string

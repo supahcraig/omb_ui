@@ -155,7 +155,7 @@ async def test_delete_sweep_cancels_pending_runs():
         sw = await db.get(Sweep, sweep_id)
     assert r1.status == "cancelled"
     assert r2.status == "cancelled"
-    assert sw.status == "failed"
+    assert sw.status == "cancelled"
 
     async with SessionLocal() as db:
         await db.execute(delete(Run).where(Run.sweep_id == sweep_id))

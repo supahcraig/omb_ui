@@ -10,6 +10,7 @@ from backend.database import get_db, SessionLocal
 from backend.models import Sweep, Run
 from backend.schemas import SweepCreate, SweepOut, SweepDetail
 from backend.services.omb_runner import OmbRunner
+from backend.services.yaml_io import write_driver, write_workload
 
 router = APIRouter(prefix="/api/sweeps", tags=["sweeps"])
 
@@ -83,6 +84,8 @@ async def _run_sweep(sweep_id: int, runner: OmbRunner) -> None:
             await db.commit()
 
         try:
+            write_driver(run_obj.driver_config)
+            write_workload(run_obj.workload_config)
             await runner.start(run_id)
             asyncio.create_task(_finish_run(run_id, runner))
             asyncio.create_task(_poll_prometheus(run_id, runner, actual_started_at))
@@ -196,7 +199,7 @@ async def cancel_sweep(sweep_id: int, db: AsyncSession = Depends(get_db)) -> dic
         elif run.status == "pending":
             run.status = "cancelled"
 
-    sweep.status = "failed"
+    sweep.status = "cancelled"
     sweep.completed_at = datetime.utcnow()
     await db.commit()
     return {"status": "cancelled"}

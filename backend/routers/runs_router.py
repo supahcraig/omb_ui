@@ -39,17 +39,19 @@ async def _finish_run(run_id: int, runner: OmbRunner) -> None:
         result_file = runner.get_result_file(run_id)
         returncode = runner.get_returncode(run_id)
 
-        if result_file and returncode == 0:
-            try:
-                metrics_data = parse_result_file(result_file)
-                db.add(Metrics(run_id=run_id, **metrics_data))
-                run.status = "completed"
-            except Exception:
+        if run.status == "running":
+            if result_file and returncode == 0:
+                try:
+                    metrics_data = parse_result_file(result_file)
+                    db.add(Metrics(run_id=run_id, **metrics_data))
+                    run.status = "completed"
+                except Exception:
+                    run.status = "failed"
+            else:
                 run.status = "failed"
-        else:
-            run.status = "failed"
 
-        run.completed_at = datetime.utcnow()
+        if run.completed_at is None:
+            run.completed_at = datetime.utcnow()
         await db.commit()
 
 

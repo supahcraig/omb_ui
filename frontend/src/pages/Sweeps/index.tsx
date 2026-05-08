@@ -8,6 +8,7 @@ function StatusBadge({ status }: { status: string }) {
     running: 'bg-blue-900 text-blue-300 border border-blue-600',
     completed: 'bg-emerald-900 text-emerald-300 border border-emerald-700',
     failed: 'bg-red-900 text-red-300 border border-red-700',
+    cancelled: 'bg-slate-700 text-slate-400 border border-slate-600',
   }
   return (
     <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${colors[status] ?? colors.failed}`}>

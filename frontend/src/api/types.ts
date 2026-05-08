@@ -58,12 +58,13 @@ export interface Metrics {
 export interface Run {
   id: number
   name: string | null
-  status: 'pending' | 'running' | 'completed' | 'failed'
+  status: 'pending' | 'running' | 'completed' | 'failed' | 'cancelled'
   started_at: string
   completed_at: string | null
   driver_config: DriverConfig
   workload_config: WorkloadConfig
   sweep_id: number | null
+  sweep_params: Record<string, string> | null
   metrics: Metrics | null
 }
 
@@ -77,6 +78,7 @@ export interface RunListItem {
   publish_latency_p99: number | null
   publish_latency_p999: number | null
   end_to_end_latency_p99: number | null
+  sweep_id: number | null
 }
 
 export interface PrometheusSample {
@@ -84,4 +86,30 @@ export interface PrometheusSample {
   batch_size_bytes: number | null
   bytes_in_per_sec: number | null
   bytes_out_per_sec: number | null
+}
+
+export interface Sweep {
+  id: number
+  name: string
+  status: 'running' | 'completed' | 'failed'
+  parameter_axes: Record<string, string[]>
+  cooldown_seconds: number
+  started_at: string
+  completed_at: string | null
+  run_count: number
+  completed_count: number
+  failed_count: number
+  est_seconds_remaining: number | null
+}
+
+export interface SweepDetail extends Sweep {
+  runs: Run[]
+}
+
+export interface SweepCreatePayload {
+  name: string
+  parameter_axes: Record<string, string[]>
+  cooldown_seconds: number
+  workload_config: Record<string, unknown>
+  driver_base_config: Record<string, unknown>
 }

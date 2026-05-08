@@ -1,4 +1,4 @@
-import type { ConfigPayload, Run, RunListItem, PrometheusSample } from './types'
+import type { ConfigPayload, Run, RunListItem, PrometheusSample, Sweep, SweepDetail, SweepCreatePayload } from './types'
 
 const base = '/api'
 
@@ -26,4 +26,11 @@ export const api = {
 
   getRunPrometheus: (id: number) =>
     request<PrometheusSample[]>(`/runs/${id}/prometheus`),
+
+  listSweeps: () => request<Sweep[]>('/sweeps'),
+  getSweep: (id: number) => request<SweepDetail>(`/sweeps/${id}`),
+  createSweep: (body: SweepCreatePayload) =>
+    request<Sweep>('/sweeps', { method: 'POST', body: JSON.stringify(body) }),
+  cancelSweep: (id: number) =>
+    request<void>(`/sweeps/${id}`, { method: 'DELETE' }),
 }

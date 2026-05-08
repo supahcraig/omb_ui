@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils'
 const links = [
   { to: '/runs/new', icon: Play, label: 'New Run' },
   { to: '/runs', icon: List, label: 'Results' },
-  { to: '/sweeps', icon: RotateCcw, label: 'Sweeps', disabled: true },
+  { to: '/sweeps', icon: RotateCcw, label: 'Sweeps' },
   { to: '/chat', icon: MessageSquare, label: 'AI Chat', disabled: true },
 ]
 

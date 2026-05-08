@@ -7,6 +7,7 @@ function StatusBadge({ status }: { status: string }) {
     running: 'bg-indigo-900 text-indigo-300 animate-pulse',
     failed: 'bg-red-900 text-red-300',
     pending: 'bg-slate-700 text-slate-300',
+    cancelled: 'bg-slate-700 text-slate-400',
   }
   return <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${colors[status] ?? colors.pending}`}>{status}</span>
 }
@@ -43,7 +44,17 @@ export default function RunTable({ runs }: Props) {
               className="hover:bg-slate-800 cursor-pointer transition-colors"
               onClick={() => navigate(`/runs/${run.id}`)}>
               <td className="px-4 py-3 text-slate-400">{run.id}</td>
-              <td className="px-4 py-3 text-slate-200">{run.name ?? <span className="text-slate-500">—</span>}</td>
+              <td className="px-4 py-3 text-slate-200">
+                {run.name ?? <span className="text-slate-500">—</span>}
+                {run.sweep_id != null && (
+                  <span
+                    className="ml-2 inline-block bg-indigo-950 border border-indigo-800 text-indigo-400 text-xs px-1.5 py-0 rounded cursor-pointer hover:bg-indigo-900"
+                    onClick={(e) => { e.stopPropagation(); navigate(`/sweeps/${run.sweep_id}`) }}
+                  >
+                    ↗ Sweep #{run.sweep_id}
+                  </span>
+                )}
+              </td>
               <td className="px-4 py-3"><StatusBadge status={run.status} /></td>
               <td className="px-4 py-3 text-slate-400">{new Date(run.started_at).toLocaleString()}</td>
               <td className="px-4 py-3 text-right font-mono text-slate-300">

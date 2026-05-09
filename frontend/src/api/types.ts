@@ -26,6 +26,9 @@ export interface WorkloadConfig {
 export interface ConfigPayload {
   driver: DriverConfig
   workload: WorkloadConfig
+  prometheus_url: string
+  prometheus_username: string
+  prometheus_password: string
 }
 
 export interface Metrics {

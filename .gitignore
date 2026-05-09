@@ -9,3 +9,5 @@ __pycache__/
 node_modules/
 frontend/dist/
 .superpowers/
+.claude/
+app_settings.json

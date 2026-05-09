@@ -1,6 +1,17 @@
+import json
 import yaml
 from pathlib import Path
 from backend.config import settings
+
+_APP_SETTINGS = Path(__file__).parent.parent.parent / "app_settings.json"
+
+def read_app_settings() -> dict:
+    if _APP_SETTINGS.exists():
+        return json.loads(_APP_SETTINGS.read_text())
+    return {}
+
+def write_app_settings(data: dict) -> None:
+    _APP_SETTINGS.write_text(json.dumps(data, indent=2))
 
 
 def _parse_kv_block(block: str) -> dict:
@@ -33,15 +44,27 @@ def parse_driver_yaml(content: str) -> dict:
     }
 
 
+def _literal_str(s: str) -> str:
+    """Marker class so PyYAML uses literal block style (|) for this string."""
+    return s
+
+class _LiteralStr(str):
+    pass
+
+def _literal_representer(dumper: yaml.Dumper, data: str) -> yaml.ScalarNode:
+    return dumper.represent_scalar("tag:yaml.org,2002:str", data, style="|")
+
+yaml.add_representer(_LiteralStr, _literal_representer)
+
 def build_driver_yaml(parsed: dict) -> str:
     data = {
         "driverClass": parsed.get("driverClass", ""),
         "replicationFactor": parsed.get("replicationFactor", 3),
         "reset": parsed.get("reset", True),
-        "topicConfig": _build_kv_block(parsed.get("topicConfig", {})) or None,
-        "commonConfig": _build_kv_block(parsed.get("commonConfig", {})) or None,
-        "producerConfig": _build_kv_block(parsed.get("producerConfig", {})) or None,
-        "consumerConfig": _build_kv_block(parsed.get("consumerConfig", {})) or None,
+        "topicConfig": _LiteralStr(_build_kv_block(parsed.get("topicConfig", {}))),
+        "commonConfig": _LiteralStr(_build_kv_block(parsed.get("commonConfig", {}))),
+        "producerConfig": _LiteralStr(_build_kv_block(parsed.get("producerConfig", {}))),
+        "consumerConfig": _LiteralStr(_build_kv_block(parsed.get("consumerConfig", {}))),
     }
     return yaml.dump(data, default_flow_style=False, allow_unicode=True, sort_keys=False)
 
@@ -58,7 +81,7 @@ def build_workload_yaml(parsed: dict) -> str:
 
 def read_driver() -> dict:
     path = Path(settings.OMB_DIR) / "driver.yaml"
-    return parse_driver_yaml(path.read_text())
+    return parse_driver_yaml(path.read_text()) if path.exists() else {}
 
 
 def write_driver(parsed: dict) -> None:
@@ -68,7 +91,7 @@ def write_driver(parsed: dict) -> None:
 
 def read_workload() -> dict:
     path = Path(settings.OMB_DIR) / "workload.yaml"
-    return parse_workload_yaml(path.read_text())
+    return parse_workload_yaml(path.read_text()) if path.exists() else {}
 
 
 def write_workload(parsed: dict) -> None:

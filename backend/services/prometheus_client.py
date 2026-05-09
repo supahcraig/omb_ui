@@ -2,12 +2,17 @@ import math
 
 import httpx
 from backend.config import settings
+from backend.services.yaml_io import read_app_settings
 
 
 async def _instant_query(url: str | None, query: str) -> float | None:
     try:
-        base = url or settings.PROMETHEUS_URL
-        async with httpx.AsyncClient(timeout=5.0) as client:
+        saved = read_app_settings()
+        base = url or saved.get("prometheus_url") or settings.PROMETHEUS_URL
+        username = saved.get("prometheus_username", "")
+        password = saved.get("prometheus_password", "")
+        auth = (username, password) if username else None
+        async with httpx.AsyncClient(timeout=5.0, auth=auth) as client:
             resp = await client.get(f"{base}/api/v1/query", params={"query": query})
             resp.raise_for_status()
             results = resp.json()["data"]["result"]

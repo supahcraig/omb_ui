@@ -10,7 +10,7 @@ from backend.database import get_db, SessionLocal
 from backend.models import Sweep, Run
 from backend.schemas import SweepCreate, SweepOut, SweepDetail
 from backend.services.omb_runner import OmbRunner
-from backend.services.yaml_io import write_driver, write_workload
+from backend.services.yaml_io import write_driver, write_workload, read_workload
 
 router = APIRouter(prefix="/api/sweeps", tags=["sweeps"])
 
@@ -139,6 +139,9 @@ async def create_sweep(
     db.add(sweep)
     await db.flush()
 
+    base_workload = read_workload()
+    base_workload.update(body.workload_config)
+
     for combo in _generate_combinations(body.parameter_axes):
         driver_config = _build_driver_config(body.driver_base_config, combo)
         db.add(Run(
@@ -146,7 +149,7 @@ async def create_sweep(
             sweep_id=sweep.id,
             sweep_params=combo,
             driver_config=driver_config,
-            workload_config=body.workload_config,
+            workload_config=base_workload,
         ))
 
     await db.commit()

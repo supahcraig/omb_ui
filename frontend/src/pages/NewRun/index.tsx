@@ -11,13 +11,36 @@ import LiveRun from './LiveRun'
 
 const DEFAULT_DRIVER: DriverConfig = {
   driverClass: 'io.openmessaging.benchmark.driver.redpanda.RedpandaBenchmarkDriver',
-  replicationFactor: 3, reset: true,
-  topicConfig: {}, commonConfig: {}, producerConfig: {}, consumerConfig: {},
+  replicationFactor: 3,
+  reset: true,
+  topicConfig: {},
+  commonConfig: {
+    'bootstrap.servers': 'broker:9092',
+    'security.protocol': 'SASL_SSL',
+    'sasl.mechanism': 'SCRAM-SHA-256',
+    'sasl.jaas.config': "org.apache.kafka.common.security.scram.ScramLoginModule required username='user' password='pass';",
+    'request.timeout.ms': '120000',
+  },
+  producerConfig: {
+    'acks': 'all',
+    'linger.ms': '1',
+    'batch.size': '131072',
+    'compression.type': 'none',
+  },
+  consumerConfig: {
+    'group.id': 'benchGroup',
+    'auto.offset.reset': 'earliest',
+    'enable.auto.commit': 'false',
+    'fetch.min.bytes': '1',
+    'fetch.max.wait.ms': '50',
+    'max.partition.fetch.bytes': '10485760',
+  },
 }
 const DEFAULT_WORKLOAD: WorkloadConfig = {
-  topics: 1, partitionsPerTopic: 10, messageSize: 1024,
-  payloadFile: 'payload/payload-1Kb.data', subscriptionsPerTopic: 1,
-  consumerPerSubscription: 1, producersPerTopic: 10, producerRate: 10000,
+  topics: 1, partitionsPerTopic: 10,
+  messageSize: 1024, payloadFile: 'payload/payload-1Kb.data',
+  subscriptionsPerTopic: 1, consumerPerSubscription: 1,
+  producersPerTopic: 10, producerRate: 10000,
   consumerBacklogSizeGB: 0, testDurationMinutes: 20, warmupDurationMinutes: 5,
 }
 
@@ -27,6 +50,9 @@ export default function NewRunPage() {
   const [runName, setRunName] = useState('')
   const [driver, setDriver] = useState<DriverConfig>(DEFAULT_DRIVER)
   const [workload, setWorkload] = useState<WorkloadConfig>(DEFAULT_WORKLOAD)
+  const [prometheusUrl, setPrometheusUrl] = useState('http://localhost:9644')
+  const [prometheusUsername, setPrometheusUsername] = useState('')
+  const [prometheusPassword, setPrometheusPassword] = useState('')
   const [activeRunId, setActiveRunId] = useState<number | null>(null)
 
   // Load current config from disk on mount
@@ -35,21 +61,32 @@ export default function NewRunPage() {
     queryFn: api.getConfig,
   })
 
-  // Apply config data when it loads
+  // Apply config data when it loads, merging with defaults so missing disk sections don't blank the form
   useEffect(() => {
     if (configData) {
-      setDriver(configData.driver)
-      setWorkload(configData.workload)
+      const d = configData.driver ?? {}
+      setDriver({
+        ...DEFAULT_DRIVER,
+        ...d,
+        topicConfig:    { ...DEFAULT_DRIVER.topicConfig,    ...(d.topicConfig    ?? {}) },
+        commonConfig:   { ...DEFAULT_DRIVER.commonConfig,   ...(d.commonConfig   ?? {}) },
+        producerConfig: { ...DEFAULT_DRIVER.producerConfig, ...(d.producerConfig ?? {}) },
+        consumerConfig: { ...DEFAULT_DRIVER.consumerConfig, ...(d.consumerConfig ?? {}) },
+      })
+      setWorkload({ ...DEFAULT_WORKLOAD, ...(configData.workload ?? {}) })
+      if (configData.prometheus_url) setPrometheusUrl(configData.prometheus_url)
+      if (configData.prometheus_username) setPrometheusUsername(configData.prometheus_username)
+      if (configData.prometheus_password) setPrometheusPassword(configData.prometheus_password)
     }
   }, [configData])
 
   const saveMutation = useMutation({
-    mutationFn: () => api.putConfig({ driver, workload }),
+    mutationFn: () => api.putConfig({ driver, workload, prometheus_url: prometheusUrl, prometheus_username: prometheusUsername, prometheus_password: prometheusPassword }),
   })
 
   const runMutation = useMutation({
     mutationFn: async () => {
-      await api.putConfig({ driver, workload })
+      await api.putConfig({ driver, workload, prometheus_url: prometheusUrl, prometheus_username: prometheusUsername, prometheus_password: prometheusPassword })
       return api.createRun(runName || undefined)
     },
     onSuccess: (run) => setActiveRunId(run.id),
@@ -111,10 +148,17 @@ export default function NewRunPage() {
 
       <div className="flex-1 min-h-0">
         <ConfigEditor
+          key={configData ? 1 : 0}
           driver={driver}
           workload={workload}
+          prometheusUrl={prometheusUrl}
+          prometheusUsername={prometheusUsername}
+          prometheusPassword={prometheusPassword}
           onDriverChange={setDriver}
           onWorkloadChange={setWorkload}
+          onPrometheusUrlChange={setPrometheusUrl}
+          onPrometheusUsernameChange={setPrometheusUsername}
+          onPrometheusPasswordChange={setPrometheusPassword}
         />
       </div>
     </div>

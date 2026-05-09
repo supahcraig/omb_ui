@@ -32,6 +32,9 @@ class WorkloadConfig(BaseModel):
 class ConfigPayload(BaseModel):
     driver: DriverConfig
     workload: WorkloadConfig
+    prometheus_url: str = ""
+    prometheus_username: str = ""
+    prometheus_password: str = ""
 
 
 # --- Runs ---

@@ -119,6 +119,12 @@ export default function SweepDetailPage() {
           </p>
         </div>
         <div className="flex gap-2">
+          <button
+            onClick={() => navigate('/sweeps/new', { state: { from: sweep } })}
+            className="border border-slate-600 text-slate-300 hover:bg-slate-800 text-sm px-4 py-1.5 rounded-md transition-colors"
+          >
+            Duplicate
+          </button>
           {sweep.status === 'running' && (
             <button
               onClick={() => cancelMutation.mutate()}

@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useQuery, useMutation } from '@tanstack/react-query'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { api } from '@/api/client'
+import type { SweepDetail } from '@/api/types'
 
 interface AxisRow { id: number; name: string; values: string[]; input: string }
 
@@ -47,6 +48,8 @@ function newRow(): AxisRow { return { id: ++_id, name: '', values: [], input: ''
 
 export default function NewSweepPage() {
   const navigate = useNavigate()
+  const location = useLocation()
+  const sourceSweep = (location.state as { from?: SweepDetail } | null)?.from
   const { data: savedConfig } = useQuery({ queryKey: ['config'], queryFn: api.getConfig })
 
   const [name, setName] = useState('')
@@ -57,6 +60,7 @@ export default function NewSweepPage() {
   const [messageSize, setMessageSize] = useState(1024)
   const [partitions, setPartitions] = useState(10)
 
+  const [driverClass, setDriverClass] = useState('io.openmessaging.benchmark.driver.redpanda.RedpandaBenchmarkDriver')
   const [bootstrapServers, setBootstrapServers] = useState('')
   const [replicationFactor, setReplicationFactor] = useState(3)
   const [compressionType, setCompressionType] = useState('none')
@@ -65,11 +69,43 @@ export default function NewSweepPage() {
   const [saslMechanism, setSaslMechanism] = useState('')
   const [saslJaasConfig, setSaslJaasConfig] = useState('')
 
-  const [configLoaded, setConfigLoaded] = useState(false)
-  if (savedConfig && !configLoaded) {
-    setConfigLoaded(true)
+  useEffect(() => {
+    if (sourceSweep) {
+      const firstRun = sourceSweep.runs?.[0]
+      const d = firstRun?.driver_config
+      const w = firstRun?.workload_config
+      setName(`Copy of ${sourceSweep.name}`)
+      setCooldown(sourceSweep.cooldown_seconds)
+      if (d) {
+        if (d.driverClass) setDriverClass(d.driverClass)
+        setBootstrapServers(d.commonConfig['bootstrap.servers'] ?? '')
+        setReplicationFactor(d.replicationFactor)
+        setCompressionType(d.producerConfig['compression.type'] ?? 'none')
+        setRequestTimeout(d.commonConfig['request.timeout.ms'] ?? '120000')
+        setSecurityProtocol(d.commonConfig['security.protocol'] ?? '')
+        setSaslMechanism(d.commonConfig['sasl.mechanism'] ?? '')
+        setSaslJaasConfig(d.commonConfig['sasl.jaas.config'] ?? '')
+      }
+      if (w) {
+        setTestDuration(w.testDurationMinutes)
+        setWarmupDuration(w.warmupDurationMinutes)
+        setProducerRate(w.producerRate)
+        setMessageSize(w.messageSize)
+        setPartitions(w.partitionsPerTopic)
+      }
+      const axesFromSweep = Object.entries(sourceSweep.parameter_axes).map(([name, values]) => ({
+        id: ++_id,
+        name,
+        values,
+        input: '',
+      }))
+      if (axesFromSweep.length > 0) setAxes(axesFromSweep)
+      return
+    }
+    if (!savedConfig) return
     const d = savedConfig.driver
     const w = savedConfig.workload
+    if (d.driverClass) setDriverClass(d.driverClass)
     setBootstrapServers(d.commonConfig['bootstrap.servers'] ?? '')
     setReplicationFactor(d.replicationFactor)
     setCompressionType(d.producerConfig['compression.type'] ?? 'none')
@@ -82,7 +118,7 @@ export default function NewSweepPage() {
     setProducerRate(w.producerRate)
     setMessageSize(w.messageSize)
     setPartitions(w.partitionsPerTopic)
-  }
+  }, [savedConfig, sourceSweep])
 
   const [axes, setAxes] = useState<AxisRow[]>([newRow()])
 
@@ -126,6 +162,7 @@ export default function NewSweepPage() {
         partitionsPerTopic: partitions,
       },
       driver_base_config: {
+        driverClass,
         replicationFactor,
         commonConfig,
         producerConfig: { 'compression.type': compressionType },
@@ -157,8 +194,10 @@ export default function NewSweepPage() {
   return (
     <div className="p-6 max-w-3xl">
       <div className="mb-6">
-        <h1 className="text-xl font-semibold text-slate-100">New Sweep</h1>
-        <p className="text-sm text-slate-400 mt-0.5">Run a Cartesian-product parameter sweep</p>
+        <h1 className="text-xl font-semibold text-slate-100">{sourceSweep ? 'Duplicate Sweep' : 'New Sweep'}</h1>
+        <p className="text-sm text-slate-400 mt-0.5">
+          {sourceSweep ? `Copying from "${sourceSweep.name}"` : 'Run a Cartesian-product parameter sweep'}
+        </p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-5">

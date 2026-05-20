@@ -2,13 +2,13 @@
 set -e
 
 # One-time setup for a fresh Ubuntu worker.
-# Installs system prerequisites, clones the repo, then runs deploy.sh.
+# Installs system prerequisites and clones the repo.
 #
 # Usage (from the worker):
 #   curl -fsSL https://raw.githubusercontent.com/supahcraig/omb_ui/main/setup.sh | bash
 #
-# Or clone first and run directly:
-#   bash setup.sh
+# Then run deploy.sh interactively to configure .env:
+#   bash ~/omb_ui/deploy.sh
 
 REPO_URL="https://github.com/supahcraig/omb_ui.git"
 INSTALL_DIR="$HOME/omb_ui"
@@ -32,5 +32,8 @@ else
   git clone "$REPO_URL" "$INSTALL_DIR"
 fi
 
-echo "==> Running deploy.sh..."
-bash "$INSTALL_DIR/deploy.sh"
+echo ""
+echo "==> Setup complete. Run deploy.sh to finish:"
+echo ""
+echo "    bash ~/omb_ui/deploy.sh"
+echo ""

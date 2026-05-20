@@ -36,12 +36,17 @@ ssh -i ~/.ssh/redpanda_gcp ubuntu@<worker-ip>
 bash ~/omb_ui/deploy.sh
 ```
 
-`deploy.sh` will prompt for three values:
+`deploy.sh` will prompt for these values:
 
 | Prompt | Default | Description |
 |---|---|---|
 | `OMB_DIR` | `/opt/benchmark` | Root of the OMB installation |
+| `BROKER_ADDR` | *(blank)* | Kafka bootstrap.servers address |
 | `PROMETHEUS_URL` | `http://localhost:9644` | Prometheus endpoint for metric queries |
+| `PROMETHEUS_USERNAME` | `prometheus` | Prometheus basic auth username |
+| `PROMETHEUS_PASSWORD` | *(blank)* | Prometheus basic auth password |
+| `SASL_USERNAME` | *(blank)* | SASL username (leave blank if not using SASL) |
+| `SASL_PASSWORD` | *(blank)* | SASL password |
 | `ANTHROPIC_API_KEY` | *(blank)* | Optional — enables AI analysis features |
 
 After deploy, the UI is available at **http://\<worker-ip\>:8888**.

@@ -67,7 +67,8 @@ export default function NewSweepPage() {
   const [requestTimeout, setRequestTimeout] = useState('120000')
   const [securityProtocol, setSecurityProtocol] = useState('')
   const [saslMechanism, setSaslMechanism] = useState('')
-  const [saslJaasConfig, setSaslJaasConfig] = useState('')
+  const [saslUsername, setSaslUsername] = useState('')
+  const [saslPassword, setSaslPassword] = useState('')
 
   useEffect(() => {
     if (sourceSweep) {
@@ -84,7 +85,11 @@ export default function NewSweepPage() {
         setRequestTimeout(d.commonConfig['request.timeout.ms'] ?? '120000')
         setSecurityProtocol(d.commonConfig['security.protocol'] ?? '')
         setSaslMechanism(d.commonConfig['sasl.mechanism'] ?? '')
-        setSaslJaasConfig(d.commonConfig['sasl.jaas.config'] ?? '')
+        const jaas = d.commonConfig['sasl.jaas.config'] ?? ''
+        const userMatch = jaas.match(/username="([^"]*)"/)
+        const passMatch = jaas.match(/password="([^"]*)"/)
+        if (userMatch) setSaslUsername(userMatch[1])
+        if (passMatch) setSaslPassword(passMatch[1])
       }
       if (w) {
         setTestDuration(w.testDurationMinutes)
@@ -112,7 +117,8 @@ export default function NewSweepPage() {
     setRequestTimeout(d.commonConfig['request.timeout.ms'] ?? '120000')
     setSecurityProtocol(d.commonConfig['security.protocol'] ?? '')
     setSaslMechanism(d.commonConfig['sasl.mechanism'] ?? '')
-    setSaslJaasConfig(d.commonConfig['sasl.jaas.config'] ?? '')
+    if (savedConfig.sasl_username) setSaslUsername(savedConfig.sasl_username)
+    if (savedConfig.sasl_password) setSaslPassword(savedConfig.sasl_password)
     setTestDuration(w.testDurationMinutes)
     setWarmupDuration(w.warmupDurationMinutes)
     setProducerRate(w.producerRate)
@@ -148,7 +154,12 @@ export default function NewSweepPage() {
     }
     if (securityProtocol) commonConfig['security.protocol'] = securityProtocol
     if (saslMechanism) commonConfig['sasl.mechanism'] = saslMechanism
-    if (saslJaasConfig) commonConfig['sasl.jaas.config'] = saslJaasConfig
+    if (saslUsername && saslPassword) {
+      const module = saslMechanism.toUpperCase().includes('SCRAM')
+        ? 'org.apache.kafka.common.security.scram.ScramLoginModule'
+        : 'org.apache.kafka.common.security.plain.PlainLoginModule'
+      commonConfig['sasl.jaas.config'] = `${module} required username="${saslUsername}" password="${saslPassword}";`
+    }
 
     mutation.mutate({
       name,
@@ -258,11 +269,12 @@ export default function NewSweepPage() {
             <Field label="sasl.mechanism">
               <input className={`${inputCls} font-mono text-xs`} value={saslMechanism} onChange={e => setSaslMechanism(e.target.value)} />
             </Field>
-            <div className="col-span-2">
-              <Field label="sasl.jaas.config">
-                <input className={`${inputCls} font-mono text-xs w-full`} value={saslJaasConfig} onChange={e => setSaslJaasConfig(e.target.value)} />
-              </Field>
-            </div>
+            <Field label="sasl.username">
+              <input className={`${inputCls} font-mono text-xs`} value={saslUsername} onChange={e => setSaslUsername(e.target.value)} />
+            </Field>
+            <Field label="sasl.password">
+              <input type="password" className={`${inputCls} font-mono text-xs`} value={saslPassword} onChange={e => setSaslPassword(e.target.value)} />
+            </Field>
           </div>
         </div>
 

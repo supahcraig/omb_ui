@@ -16,14 +16,32 @@ if [ ! -f .env ]; then
   read -rp "OMB_DIR [/opt/benchmark]: " OMB_DIR_INPUT
   OMB_DIR_VAL="${OMB_DIR_INPUT:-/opt/benchmark}"
 
+  read -rp "Broker address (bootstrap.servers): " BROKER_INPUT
+
   read -rp "PROMETHEUS_URL [http://localhost:9644]: " PROM_INPUT
   PROM_VAL="${PROM_INPUT:-http://localhost:9644}"
+
+  read -rp "Prometheus username [prometheus]: " PROM_USER_INPUT
+  PROM_USER_VAL="${PROM_USER_INPUT:-prometheus}"
+
+  read -rsp "Prometheus password: " PROM_PASS_INPUT
+  echo ""
+
+  read -rp "SASL username (leave blank if not using SASL): " SASL_USER_INPUT
+
+  read -rsp "SASL password: " SASL_PASS_INPUT
+  echo ""
 
   read -rp "ANTHROPIC_API_KEY (optional, leave blank to skip): " ANTHROPIC_INPUT
 
   cat > .env <<EOF
 OMB_DIR=${OMB_DIR_VAL}
+BROKER_ADDR=${BROKER_INPUT}
 PROMETHEUS_URL=${PROM_VAL}
+PROMETHEUS_USERNAME=${PROM_USER_VAL}
+PROMETHEUS_PASSWORD=${PROM_PASS_INPUT}
+SASL_USERNAME=${SASL_USER_INPUT}
+SASL_PASSWORD=${SASL_PASS_INPUT}
 ANTHROPIC_API_KEY=${ANTHROPIC_INPUT}
 EOF
   echo ".env created."

@@ -8,7 +8,7 @@ const LABEL  = 'shrink-0 w-48 text-xs text-slate-400 font-mono'
 const NUM    = 'w-24 bg-slate-900 border-slate-700 text-slate-100 h-7 text-sm'
 const SHORT  = 'w-36 bg-slate-900 border-slate-700 text-slate-100 h-7 text-sm font-mono text-xs'
 const MED    = 'w-56 bg-slate-900 border-slate-700 text-slate-100 h-7 text-sm font-mono text-xs'
-const WIDE   = 'flex-1 bg-slate-900 border-slate-700 text-slate-100 h-7 text-sm font-mono text-xs'
+
 const SEL    = 'bg-slate-900 border border-slate-700 text-slate-100 rounded-md px-2 py-1 text-sm font-mono h-7 focus:outline-none focus:ring-2 focus:ring-indigo-500'
 const ROW    = 'flex items-center gap-3'
 const HDR    = 'text-xs font-semibold text-indigo-400 uppercase tracking-wider pt-2'
@@ -23,7 +23,16 @@ function setConsumer(value: DriverConfig, key: string, val: string): DriverConfi
   return { ...value, consumerConfig: { ...value.consumerConfig, [key]: val } }
 }
 
-export default function DriverForm({ value, onChange }: { value: DriverConfig; onChange: (d: DriverConfig) => void }) {
+interface DriverFormProps {
+  value: DriverConfig
+  onChange: (d: DriverConfig) => void
+  saslUsername: string
+  saslPassword: string
+  onSaslUsernameChange: (v: string) => void
+  onSaslPasswordChange: (v: string) => void
+}
+
+export default function DriverForm({ value, onChange, saslUsername, saslPassword, onSaslUsernameChange, onSaslPasswordChange }: DriverFormProps) {
   return (
     <div className="space-y-2">
       <div className={HDR}>Connection</div>
@@ -36,9 +45,12 @@ export default function DriverForm({ value, onChange }: { value: DriverConfig; o
       <div className={ROW}><span className={LABEL}>sasl.mechanism</span>
         <Input className={SHORT} value={value.commonConfig['sasl.mechanism'] ?? ''}
           onChange={e => onChange(setCommon(value, 'sasl.mechanism', e.target.value))} /></div>
-      <div className={ROW}><span className={LABEL}>sasl.jaas.config</span>
-        <Input className={WIDE} value={value.commonConfig['sasl.jaas.config'] ?? ''}
-          onChange={e => onChange(setCommon(value, 'sasl.jaas.config', e.target.value))} /></div>
+      <div className={ROW}><span className={LABEL}>sasl.username</span>
+        <Input className={MED} value={saslUsername}
+          onChange={e => onSaslUsernameChange(e.target.value)} /></div>
+      <div className={ROW}><span className={LABEL}>sasl.password</span>
+        <Input type="password" className={MED} value={saslPassword}
+          onChange={e => onSaslPasswordChange(e.target.value)} /></div>
       <div className={ROW}><span className={LABEL}>request.timeout.ms</span>
         <Input className={NUM} value={value.commonConfig['request.timeout.ms'] ?? ''}
           onChange={e => onChange(setCommon(value, 'request.timeout.ms', e.target.value))} /></div>

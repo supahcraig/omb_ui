@@ -35,6 +35,8 @@ class ConfigPayload(BaseModel):
     prometheus_url: str = ""
     prometheus_username: str = ""
     prometheus_password: str = ""
+    sasl_username: str = ""
+    sasl_password: str = ""
 
 
 # --- Runs ---

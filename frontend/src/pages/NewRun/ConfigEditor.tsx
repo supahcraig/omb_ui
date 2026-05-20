@@ -12,11 +12,15 @@ interface Props {
   prometheusUrl: string
   prometheusUsername: string
   prometheusPassword: string
+  saslUsername: string
+  saslPassword: string
   onDriverChange: (d: DriverConfig) => void
   onWorkloadChange: (w: WorkloadConfig) => void
   onPrometheusUrlChange: (url: string) => void
   onPrometheusUsernameChange: (v: string) => void
   onPrometheusPasswordChange: (v: string) => void
+  onSaslUsernameChange: (v: string) => void
+  onSaslPasswordChange: (v: string) => void
 }
 
 function toDriverYaml(d: DriverConfig): string {
@@ -56,7 +60,7 @@ function fromDriverYaml(text: string): DriverConfig | null {
   } catch (_e) { return null }
 }
 
-export default function ConfigEditor({ driver, workload, prometheusUrl, prometheusUsername, prometheusPassword, onDriverChange, onWorkloadChange, onPrometheusUrlChange, onPrometheusUsernameChange, onPrometheusPasswordChange }: Props) {
+export default function ConfigEditor({ driver, workload, prometheusUrl, prometheusUsername, prometheusPassword, saslUsername, saslPassword, onDriverChange, onWorkloadChange, onPrometheusUrlChange, onPrometheusUsernameChange, onPrometheusPasswordChange, onSaslUsernameChange, onSaslPasswordChange }: Props) {
   const [driverYaml, setDriverYaml] = useState(() => toDriverYaml(driver))
   const [workloadYaml, setWorkloadYaml] = useState(() => jsYaml.dump(workload, { lineWidth: -1 }))
 
@@ -120,7 +124,14 @@ export default function ConfigEditor({ driver, workload, prometheusUrl, promethe
         <div className="flex flex-col min-h-0">
           <div className="text-xs font-semibold text-indigo-400 uppercase tracking-wider mb-2">Driver</div>
           <div className="flex-1 overflow-y-auto min-h-0 pr-1">
-            <DriverForm value={driver} onChange={handleDriverFormChange} />
+            <DriverForm
+              value={driver}
+              onChange={handleDriverFormChange}
+              saslUsername={saslUsername}
+              saslPassword={saslPassword}
+              onSaslUsernameChange={onSaslUsernameChange}
+              onSaslPasswordChange={onSaslPasswordChange}
+            />
           </div>
         </div>
       </div>

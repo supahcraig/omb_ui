@@ -29,6 +29,8 @@ export interface ConfigPayload {
   prometheus_url: string
   prometheus_username: string
   prometheus_password: string
+  sasl_username: string
+  sasl_password: string
 }
 
 export interface Metrics {

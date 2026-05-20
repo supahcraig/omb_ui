@@ -53,6 +53,8 @@ export default function NewRunPage() {
   const [prometheusUrl, setPrometheusUrl] = useState('http://localhost:9644')
   const [prometheusUsername, setPrometheusUsername] = useState('')
   const [prometheusPassword, setPrometheusPassword] = useState('')
+  const [saslUsername, setSaslUsername] = useState('')
+  const [saslPassword, setSaslPassword] = useState('')
   const [activeRunId, setActiveRunId] = useState<number | null>(null)
 
   // Load current config from disk on mount
@@ -77,16 +79,18 @@ export default function NewRunPage() {
       if (configData.prometheus_url) setPrometheusUrl(configData.prometheus_url)
       if (configData.prometheus_username) setPrometheusUsername(configData.prometheus_username)
       if (configData.prometheus_password) setPrometheusPassword(configData.prometheus_password)
+      if (configData.sasl_username) setSaslUsername(configData.sasl_username)
+      if (configData.sasl_password) setSaslPassword(configData.sasl_password)
     }
   }, [configData])
 
   const saveMutation = useMutation({
-    mutationFn: () => api.putConfig({ driver, workload, prometheus_url: prometheusUrl, prometheus_username: prometheusUsername, prometheus_password: prometheusPassword }),
+    mutationFn: () => api.putConfig({ driver, workload, prometheus_url: prometheusUrl, prometheus_username: prometheusUsername, prometheus_password: prometheusPassword, sasl_username: saslUsername, sasl_password: saslPassword }),
   })
 
   const runMutation = useMutation({
     mutationFn: async () => {
-      await api.putConfig({ driver, workload, prometheus_url: prometheusUrl, prometheus_username: prometheusUsername, prometheus_password: prometheusPassword })
+      await api.putConfig({ driver, workload, prometheus_url: prometheusUrl, prometheus_username: prometheusUsername, prometheus_password: prometheusPassword, sasl_username: saslUsername, sasl_password: saslPassword })
       return api.createRun(runName || undefined)
     },
     onSuccess: (run) => setActiveRunId(run.id),
@@ -154,11 +158,15 @@ export default function NewRunPage() {
           prometheusUrl={prometheusUrl}
           prometheusUsername={prometheusUsername}
           prometheusPassword={prometheusPassword}
+          saslUsername={saslUsername}
+          saslPassword={saslPassword}
           onDriverChange={setDriver}
           onWorkloadChange={setWorkload}
           onPrometheusUrlChange={setPrometheusUrl}
           onPrometheusUsernameChange={setPrometheusUsername}
           onPrometheusPasswordChange={setPrometheusPassword}
+          onSaslUsernameChange={setSaslUsername}
+          onSaslPasswordChange={setSaslPassword}
         />
       </div>
     </div>

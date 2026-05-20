@@ -12,21 +12,39 @@ A web interface for [OpenMessaging Benchmark (OMB)](https://github.com/redpanda-
 
 ## Prerequisites
 
-- Python 3.11+
-- Node.js 18+ and npm
-- An OMB worker with `benchmark` directory (e.g. `/opt/benchmark`)
+- An OMB worker running Ubuntu 22.04
 - Prometheus scraping the broker (for metric collection)
+- Port 8888 open in your firewall/security group
+
+Everything else (Python, Node.js, npm) is handled by `setup.sh`.
 
 ## Deployment (GCP / Linux)
 
-SSH into the OMB worker and clone the repo:
+### Fresh install
+
+From your local machine, run `setup.sh` via curl — this installs system prerequisites and clones the repo:
+
+```bash
+ssh -i ~/.ssh/redpanda_gcp ubuntu@<worker-ip> \
+  "curl -fsSL https://raw.githubusercontent.com/supahcraig/omb_ui/main/setup.sh | bash"
+```
+
+Then SSH in and run `deploy.sh` interactively to configure `.env`:
 
 ```bash
 ssh -i ~/.ssh/redpanda_gcp ubuntu@<worker-ip>
-git clone <repo-url> ~/omb_ui
-cd ~/omb_ui
-bash deploy.sh
+bash ~/omb_ui/deploy.sh
 ```
+
+`deploy.sh` will prompt for three values:
+
+| Prompt | Default | Description |
+|---|---|---|
+| `OMB_DIR` | `/opt/benchmark` | Root of the OMB installation |
+| `PROMETHEUS_URL` | `http://localhost:9644` | Prometheus endpoint for metric queries |
+| `ANTHROPIC_API_KEY` | *(blank)* | Optional — enables AI analysis features |
+
+After deploy, the UI is available at **http://\<worker-ip\>:8888**.
 
 ### Updating
 
@@ -37,7 +55,7 @@ cd ~/omb_ui && git pull && bash deploy.sh
 
 ### Dev iteration (rsync from local)
 
-If you're actively developing and want to push local changes without committing:
+Push local changes to the worker without committing:
 
 ```bash
 WORKER=ubuntu@<worker-ip>
@@ -48,30 +66,6 @@ rsync -av --exclude .git --exclude node_modules --exclude __pycache__ \
       . $WORKER:~/omb_ui/
 
 ssh -i ~/.ssh/redpanda_gcp $WORKER "cd ~/omb_ui && bash deploy.sh"
-```
-
-On first run, the script prompts for three values and creates `.env`:
-
-| Prompt | Default | Description |
-|---|---|---|
-| `OMB_DIR` | `/opt/benchmark` | Root of the OMB installation |
-| `PROMETHEUS_URL` | `http://localhost:9644` | Prometheus endpoint for metric queries |
-| `ANTHROPIC_API_KEY` | *(blank)* | Optional — enables AI analysis features |
-
-The script then:
-1. Installs Python dependencies (`pip install -r requirements.txt`)
-2. Builds the React frontend (`npm install && npm run build`)
-3. Installs and starts a systemd service (`omb-ui`) on port 8888
-
-After deploy, the UI is available at **http://\<worker-ip\>:8888**.
-
-### Updating
-
-Pull new code and re-run `deploy.sh` — it skips the `.env` prompt if `.env` already exists:
-
-```bash
-git pull
-bash deploy.sh
 ```
 
 ### Logs

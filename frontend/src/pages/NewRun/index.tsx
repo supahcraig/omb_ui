@@ -1,5 +1,5 @@
-import { useState, useCallback, useEffect } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useState, useEffect } from 'react'
+import { useQuery, useMutation } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -7,7 +7,6 @@ import { Label } from '@/components/ui/label'
 import { api } from '@/api/client'
 import type { DriverConfig, WorkloadConfig } from '@/api/types'
 import ConfigEditor from './ConfigEditor'
-import LiveRun from './LiveRun'
 
 const DEFAULT_DRIVER: DriverConfig = {
   driverClass: 'io.openmessaging.benchmark.driver.redpanda.RedpandaBenchmarkDriver',
@@ -46,7 +45,6 @@ const DEFAULT_WORKLOAD: WorkloadConfig = {
 
 export default function NewRunPage() {
   const navigate = useNavigate()
-  const queryClient = useQueryClient()
   const [runName, setRunName] = useState('')
   const [driver, setDriver] = useState<DriverConfig>(DEFAULT_DRIVER)
   const [workload, setWorkload] = useState<WorkloadConfig>(DEFAULT_WORKLOAD)
@@ -55,7 +53,6 @@ export default function NewRunPage() {
   const [prometheusPassword, setPrometheusPassword] = useState('')
   const [saslUsername, setSaslUsername] = useState('')
   const [saslPassword, setSaslPassword] = useState('')
-  const [activeRunId, setActiveRunId] = useState<number | null>(null)
 
   // Load current config from disk on mount
   const { data: configData } = useQuery({
@@ -93,37 +90,8 @@ export default function NewRunPage() {
       await api.putConfig({ driver, workload, prometheus_url: prometheusUrl, prometheus_username: prometheusUsername, prometheus_password: prometheusPassword, sasl_username: saslUsername, sasl_password: saslPassword })
       return api.createRun(runName || undefined)
     },
-    onSuccess: (run) => setActiveRunId(run.id),
+    onSuccess: (run) => navigate(`/runs/${run.id}`),
   })
-
-  const handleComplete = useCallback(() => {
-    queryClient.invalidateQueries({ queryKey: ['runs'] })
-  }, [queryClient])
-
-  const handleStop = useCallback(() => {
-    setActiveRunId(null)
-    queryClient.invalidateQueries({ queryKey: ['runs'] })
-  }, [queryClient])
-
-  if (activeRunId !== null) {
-    return (
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h1 className="text-xl font-semibold">Run #{activeRunId} in progress</h1>
-          <Button variant="outline" size="sm" onClick={() => navigate(`/runs/${activeRunId}`)}>
-            View Details →
-          </Button>
-        </div>
-        <LiveRun
-          runId={activeRunId}
-          warmupMinutes={workload.warmupDurationMinutes}
-          testMinutes={workload.testDurationMinutes}
-          onComplete={handleComplete}
-          onStop={handleStop}
-        />
-      </div>
-    )
-  }
 
   return (
     <div className="space-y-4 h-full flex flex-col">

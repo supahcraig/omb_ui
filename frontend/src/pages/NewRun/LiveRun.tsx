@@ -6,14 +6,15 @@ interface Props {
   runId: number
   warmupMinutes: number
   testMinutes: number
+  initialElapsed?: number
   onComplete: () => void
   onStop: () => void
 }
 
-export default function LiveRun({ runId, warmupMinutes, testMinutes, onComplete, onStop }: Props) {
+export default function LiveRun({ runId, warmupMinutes, testMinutes, initialElapsed = 0, onComplete, onStop }: Props) {
   const [lines, setLines] = useState<string[]>([])
   const [done, setDone] = useState(false)
-  const [elapsed, setElapsed] = useState(0)
+  const [elapsed, setElapsed] = useState(initialElapsed)
   const logRef = useRef<HTMLDivElement>(null)
   const totalSeconds = (warmupMinutes + testMinutes) * 60
 

@@ -1,15 +1,17 @@
 import { useParams, Link } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Button } from '@/components/ui/button'
 import { api } from '@/api/client'
 import MetricsTiles from './MetricsTiles'
 import LatencyBars from './LatencyBars'
 import ThroughputChart from './ThroughputChart'
 import PrometheusCharts from './PrometheusCharts'
+import LiveRun from '../NewRun/LiveRun'
 
 export default function RunDetailPage() {
   const { id } = useParams<{ id: string }>()
   const runId = Number(id)
+  const queryClient = useQueryClient()
 
   const { data: run, isLoading } = useQuery({
     queryKey: ['run', runId],
@@ -36,6 +38,17 @@ export default function RunDetailPage() {
         </Link>
       </div>
 
+      {run.status === 'running' && (
+        <LiveRun
+          runId={run.id}
+          warmupMinutes={run.workload_config.warmupDurationMinutes}
+          testMinutes={run.workload_config.testDurationMinutes}
+          initialElapsed={Math.floor((Date.now() - new Date(run.started_at).getTime()) / 1000)}
+          onComplete={() => queryClient.invalidateQueries({ queryKey: ['run', runId] })}
+          onStop={() => queryClient.invalidateQueries({ queryKey: ['run', runId] })}
+        />
+      )}
+
       {run.metrics && <MetricsTiles metrics={run.metrics} />}
 
       {run.metrics?.throughput_timeseries && (
@@ -52,11 +65,6 @@ export default function RunDetailPage() {
         </div>
       )}
 
-      {run.status === 'running' && (
-        <div className="bg-indigo-900/30 border border-indigo-700 rounded-lg p-4 text-indigo-300 text-sm">
-          Run in progress — benchmark metrics (publish rate, latency) will appear when complete.
-        </div>
-      )}
 
       <details className="bg-slate-900 border border-slate-700 rounded-lg">
         <summary className="px-5 py-3 cursor-pointer text-sm text-slate-400 hover:text-white">

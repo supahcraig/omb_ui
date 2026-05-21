@@ -28,10 +28,11 @@ function bytesPoints(samples: PrometheusSample[]) {
   }))
 }
 
-export default function PrometheusCharts({ runId }: { runId: number }) {
+export default function PrometheusCharts({ runId, isRunning }: { runId: number; isRunning: boolean }) {
   const { data: samples = [] } = useQuery({
     queryKey: ['prometheus', runId],
     queryFn: () => api.getRunPrometheus(runId),
+    refetchInterval: isRunning ? 10000 : false,
   })
 
   if (samples.length === 0) {

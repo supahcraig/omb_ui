@@ -42,7 +42,7 @@ export default function RunDetailPage() {
         <ThroughputChart timeseries={run.metrics.throughput_timeseries} />
       )}
 
-      {(run.status === 'completed' || run.status === 'running') && (
+      {run.status !== 'pending' && (
         <PrometheusCharts runId={run.id} isRunning={run.status === 'running'} />
       )}
 

@@ -8,6 +8,13 @@ CURRENT_USER="$(whoami)"
 
 cd "$SCRIPT_DIR"
 
+# --- Pull latest code ---
+if git rev-parse --git-dir > /dev/null 2>&1; then
+  echo "Pulling latest code..."
+  git fetch origin main
+  git reset --hard origin/main
+fi
+
 # --- .env setup ---
 if [ ! -f .env ]; then
   echo ""

@@ -26,4 +26,7 @@ async def ws_run_output(websocket: WebSocket, run_id: int):
     except WebSocketDisconnect:
         pass
     finally:
-        await websocket.close()
+        try:
+            await websocket.close()
+        except Exception:
+            pass

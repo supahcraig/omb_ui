@@ -35,10 +35,22 @@ export default function PrometheusCharts({ runId, isRunning }: { runId: number; 
     refetchInterval: isRunning ? 10000 : false,
   })
 
-  if (samples.length === 0) {
+  const allNull = samples.length > 0 && samples.every(s => s.batch_size_bytes == null && s.bytes_in_per_sec == null && s.bytes_out_per_sec == null)
+
+  if (samples.length === 0 || allNull) {
     return (
-      <div className="bg-slate-900 border border-slate-700 rounded-lg p-5">
-        <div className="text-sm text-slate-500">Prometheus data unavailable for this run.</div>
+      <div className="bg-slate-900 border border-slate-700 rounded-lg p-5 space-y-1">
+        <div className="text-sm text-slate-400 font-medium">
+          {isRunning ? 'Waiting for Prometheus data…' : 'No Prometheus data was collected for this run.'}
+        </div>
+        <div className="text-xs text-slate-500">
+          {allNull
+            ? 'Samples were collected but all queries returned empty — the metric names may not match what your Prometheus has. Check the service logs: journalctl -u omb-ui -f'
+            : isRunning
+              ? 'Queries run every 10s. If data does not appear, use the Test button on the New Run page to diagnose the Prometheus connection.'
+              : 'Prometheus may have been unreachable or misconfigured during this run. Use the Test button on the New Run page to check connectivity.'
+          }
+        </div>
       </div>
     )
   }

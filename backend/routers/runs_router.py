@@ -57,6 +57,8 @@ async def _finish_run(run_id: int, runner: OmbRunner) -> None:
 
 async def _poll_prometheus(run_id: int, runner: OmbRunner, started_at: datetime) -> None:
     """Background task: poll Prometheus every 10 s while the run is active."""
+    import logging
+    log = logging.getLogger("omb_ui.prometheus")
     while not runner.is_done(run_id):
         try:
             t = int((datetime.utcnow() - started_at).total_seconds())
@@ -65,6 +67,8 @@ async def _poll_prometheus(run_id: int, runner: OmbRunner, started_at: datetime)
                 query_bytes_in(),
                 query_bytes_out(),
             )
+            if batch is None and b_in is None and b_out is None:
+                log.warning("run %d: all Prometheus queries returned None at t=%ds — check PROMETHEUS_URL/credentials", run_id, t)
             async with SessionLocal() as db:
                 db.add(PrometheusSample(
                     run_id=run_id, t=t,
@@ -73,8 +77,8 @@ async def _poll_prometheus(run_id: int, runner: OmbRunner, started_at: datetime)
                     bytes_out_per_sec=b_out,
                 ))
                 await db.commit()
-        except Exception:
-            pass
+        except Exception as e:
+            log.error("run %d: Prometheus polling error: %s", run_id, e)
         await asyncio.sleep(10)
 
     # One final sample captured after the run ends

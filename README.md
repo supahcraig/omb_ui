@@ -1,6 +1,6 @@
 # OMB UI
 
-A web interface for [OpenMessaging Benchmark (OMB)](https://github.com/redpanda-data/openmessaging-benchmark) that lets you launch benchmark runs, run parameter sweeps, and visualize results — all from a browser.
+A web interface for [OpenMessaging Benchmark (OMB)](https://github.com/redpanda-data/openmessaging-benchmark) that lets you launch benchmark runs, run parameter sweeps, and compare results — all from a browser.
 
 ## Features
 
@@ -8,7 +8,7 @@ A web interface for [OpenMessaging Benchmark (OMB)](https://github.com/redpanda-
 - **Parameter sweeps** — define axes of values (e.g. `messageSize: [1024, 4096, 16384]`), run the Cartesian product automatically with configurable cooldown between runs
 - **Results table** — compare runs by publish rate, p99 latency, p99.9 latency, and end-to-end p99
 - **Sweep comparison table** — highlight best/worst per metric across all runs in a sweep
-- **Prometheus integration** — pull metrics from a local Prometheus endpoint after each run
+- **Prometheus integration** — pull metrics from a Prometheus endpoint after each run
 
 ## Prerequisites
 
@@ -55,22 +55,13 @@ After deploy, the UI is available at **http://\<worker-ip\>:8888**.
 
 ```bash
 ssh -i ~/.ssh/redpanda_gcp ubuntu@<worker-ip>
-cd ~/omb_ui && git pull && bash deploy.sh
+cd ~/omb_ui && git reset --hard origin/main && git pull && bash deploy.sh
 ```
 
-### Dev iteration (rsync from local)
-
-Push local changes to the worker without committing:
+### Reconfiguring .env
 
 ```bash
-WORKER=ubuntu@<worker-ip>
-
-rsync -av --exclude .git --exclude node_modules --exclude __pycache__ \
-      --exclude '*.pyc' --exclude omb_ui.db --exclude .env \
-      -e "ssh -i ~/.ssh/redpanda_gcp" \
-      . $WORKER:~/omb_ui/
-
-ssh -i ~/.ssh/redpanda_gcp $WORKER "cd ~/omb_ui && bash deploy.sh"
+rm ~/omb_ui/.env && bash ~/omb_ui/deploy.sh
 ```
 
 ### Logs
@@ -79,24 +70,55 @@ ssh -i ~/.ssh/redpanda_gcp $WORKER "cd ~/omb_ui && bash deploy.sh"
 journalctl -u omb-ui -f
 ```
 
-### Manual start (no systemd)
+## Usage
 
-```bash
-source .env
-uvicorn backend.main:app --host 0.0.0.0 --port 8888
-```
+### Single Run
+
+1. Navigate to **New Run**
+2. Configure the **Workload** (duration, producer rate, message size, partitions) and **Driver** (broker address, SASL credentials, compression, acks) settings
+3. Click **Save Config** to persist the settings to disk, or **▶ Run** to save and immediately start a benchmark
+4. Watch live output while the run is in progress; results appear in the **Runs** table when complete
+
+### Parameter Sweeps
+
+Sweeps run the Cartesian product of one or more parameter axes automatically, with a configurable cooldown between runs.
+
+1. Navigate to **Sweeps → New Sweep**
+2. Set the sweep name and cooldown (seconds between runs)
+3. Configure the base **Workload** and **Driver** settings — these apply to every run in the sweep
+4. Under **Swept Parameters**, add one or more axes:
+   - Enter a parameter name (e.g. `batch.size`) in the left field
+   - Type a value and press **Enter** to add it as a chip — repeat for each value to sweep
+   - Add more axes with **+ Add parameter**
+5. The **Combinations** counter shows how many runs will be created (Cartesian product of all axes)
+6. Click **Create Sweep** — runs execute sequentially, and the sweep detail page updates live
+
+**Example:** sweeping `batch.size` over `16384 65536 131072` and `linger.ms` over `1 5` creates 6 runs.
+
+#### Duplicating a sweep
+
+On any sweep detail page, click **Duplicate** to open a pre-populated New Sweep form with all settings copied from that sweep. Adjust whatever you want and create the new sweep.
+
+#### Reading sweep results
+
+The sweep detail table highlights the **best** (green) and **worst** (red) result per metric across all completed runs, making it easy to identify winning configurations at a glance.
 
 ## Configuration
 
-`.env` values (created by `deploy.sh`, or copy from the table above):
+`.env` on the worker (created by `deploy.sh`):
 
 ```
 OMB_DIR=/opt/benchmark
+BROKER_ADDR=broker:9092
 PROMETHEUS_URL=http://localhost:9644
+PROMETHEUS_USERNAME=prometheus
+PROMETHEUS_PASSWORD=secret
+SASL_USERNAME=myuser
+SASL_PASSWORD=mypassword
 ANTHROPIC_API_KEY=sk-ant-...   # optional
 ```
 
-The UI exposes a **Config** endpoint (`PUT /api/config`) that lets you update the default workload and driver YAML templates through the New Run form without editing files directly.
+These values pre-populate the UI on first load. You can override them at any time through the **New Run** config form and click **Save Config** — changes are persisted to the worker and used for all subsequent runs and sweeps.
 
 ## Local Development (Mac)
 

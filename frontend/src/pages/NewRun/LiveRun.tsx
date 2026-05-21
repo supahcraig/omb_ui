@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { api } from '@/api/client'
+import LiveMetrics, { EMPTY_ACCUM, LiveMetricState, parseOmbLine, updateAccum } from './LiveMetrics'
 
 interface Props {
   runId: number
@@ -15,6 +16,10 @@ export default function LiveRun({ runId, warmupMinutes, testMinutes, initialElap
   const [lines, setLines] = useState<string[]>([])
   const [done, setDone] = useState(false)
   const [elapsed, setElapsed] = useState(initialElapsed)
+  const [liveMetrics, setLiveMetrics] = useState<LiveMetricState>({
+    pubRate: { ...EMPTY_ACCUM }, consRate: { ...EMPTY_ACCUM },
+    backlog: { ...EMPTY_ACCUM }, pubP99:   { ...EMPTY_ACCUM },
+  })
   const logRef = useRef<HTMLDivElement>(null)
   const totalSeconds = (warmupMinutes + testMinutes) * 60
 
@@ -27,6 +32,15 @@ export default function LiveRun({ runId, warmupMinutes, testMinutes, initialElap
         if (msg.type === 'done') { setDone(true); onComplete() }
       } catch (_e) {
         setLines(prev => [...prev.slice(-499), e.data])
+        const parsed = parseOmbLine(e.data)
+        if (parsed) {
+          setLiveMetrics(prev => ({
+            pubRate:  parsed.pubRate  != null ? updateAccum(prev.pubRate,  parsed.pubRate)  : prev.pubRate,
+            consRate: parsed.consRate != null ? updateAccum(prev.consRate, parsed.consRate) : prev.consRate,
+            backlog:  parsed.backlog  != null ? updateAccum(prev.backlog,  parsed.backlog)  : prev.backlog,
+            pubP99:   parsed.pubP99   != null ? updateAccum(prev.pubP99,   parsed.pubP99)   : prev.pubP99,
+          }))
+        }
       }
     }
     ws.onerror = () => setDone(true)
@@ -72,6 +86,9 @@ export default function LiveRun({ runId, warmupMinutes, testMinutes, initialElap
         />
       </div>
       <div className="text-xs text-slate-500">{progress.toFixed(0)}% complete</div>
+
+      {/* Live gauges */}
+      <LiveMetrics metrics={liveMetrics} />
 
       {/* Log tail */}
       <div

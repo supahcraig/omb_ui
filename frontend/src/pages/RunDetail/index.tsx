@@ -54,7 +54,7 @@ export default function RunDetailPage() {
 
       {run.status === 'running' && (
         <div className="bg-indigo-900/30 border border-indigo-700 rounded-lg p-4 text-indigo-300 text-sm">
-          Run in progress — metrics will appear when complete.
+          Run in progress — benchmark metrics (publish rate, latency) will appear when complete.
         </div>
       )}
 

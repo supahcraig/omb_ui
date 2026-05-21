@@ -27,6 +27,11 @@ export const api = {
   getRunPrometheus: (id: number) =>
     request<PrometheusSample[]>(`/runs/${id}/prometheus`),
 
+  testPrometheus: (url: string, username: string, password: string) =>
+    request<{ status: string; url: string; detail: string; hint: string | null }>(
+      `/prometheus/test?${new URLSearchParams({ url, username, password })}`
+    ),
+
   listSweeps: () => request<Sweep[]>('/sweeps'),
   getSweep: (id: number) => request<SweepDetail>(`/sweeps/${id}`),
   createSweep: (body: SweepCreatePayload) =>

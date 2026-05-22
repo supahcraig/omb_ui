@@ -9,27 +9,40 @@ export interface LivePoint {
   consRate: number | null
   backlog:  number | null
   pubP50:   number | null
-  pubP95:   number | null
   pubP99:   number | null
   pubP999:  number | null
   e2eP50:   number | null
-  e2eP95:   number | null
   e2eP99:   number | null
   e2eP999:  number | null
 }
 
 export type LiveMetricState = LivePoint[]
 
-export function parseOmbLine(line: string): Omit<LivePoint, 't'> | null {
-  if (!line.includes('Pub rate')) return null
+export type ParsedOmbLine =
+  | { kind: 'pub' } & Omit<LivePoint, 't'>
+  | { kind: 'e2e'; e2eP50: number | null; e2eP99: number | null; e2eP999: number | null }
 
-  const r: Omit<LivePoint, 't'> = {
-    pubRate: null, consRate: null, backlog: null,
-    pubP50: null, pubP95: null, pubP99: null, pubP999: null,
-    e2eP50: null, e2eP95: null, e2eP99: null, e2eP999: null,
+export function parseOmbLine(line: string): ParsedOmbLine | null {
+  let m: RegExpMatchArray | null
+
+  if (line.includes('E2E Latency')) {
+    const r = { kind: 'e2e' as const, e2eP50: null as number | null, e2eP99: null as number | null, e2eP999: null as number | null }
+    m = line.match(/\b50%:\s*([\d.]+)/);  if (m) r.e2eP50  = parseFloat(m[1])
+    m = line.match(/\b99%:\s*([\d.]+)/);  if (m) r.e2eP99  = parseFloat(m[1])
+    m = line.match(/99\.9%:\s*([\d.]+)/); if (m) r.e2eP999 = parseFloat(m[1])
+    return r
   }
 
-  let m = line.match(/Pub rate\s+([\d.]+)\s+msg\/s/)
+  if (!line.includes('Pub rate')) return null
+
+  const r = {
+    kind: 'pub' as const,
+    pubRate: null as number | null, consRate: null as number | null, backlog: null as number | null,
+    pubP50: null as number | null, pubP99: null as number | null, pubP999: null as number | null,
+    e2eP50: null as number | null, e2eP99: null as number | null, e2eP999: null as number | null,
+  }
+
+  m = line.match(/Pub rate\s+([\d.]+)\s+msg\/s/)
   if (m) r.pubRate = parseFloat(m[1])
 
   m = line.match(/Cons rate\s+([\d.]+)\s+msg\/s/)
@@ -42,17 +55,8 @@ export function parseOmbLine(line: string): Omit<LivePoint, 't'> | null {
   const pubSec = line.match(/Pub Latency[^|]*/)?.[0] ?? ''
   if (pubSec) {
     m = pubSec.match(/\b50%:\s*([\d.]+)/);  if (m) r.pubP50  = parseFloat(m[1])
-    m = pubSec.match(/\b95%:\s*([\d.]+)/);  if (m) r.pubP95  = parseFloat(m[1])
     m = pubSec.match(/\b99%:\s*([\d.]+)/);  if (m) r.pubP99  = parseFloat(m[1])
     m = pubSec.match(/99\.9%:\s*([\d.]+)/); if (m) r.pubP999 = parseFloat(m[1])
-  }
-
-  const e2eSec = line.match(/E2E Latency[^|]*/)?.[0] ?? ''
-  if (e2eSec) {
-    m = e2eSec.match(/\b50%:\s*([\d.]+)/);  if (m) r.e2eP50  = parseFloat(m[1])
-    m = e2eSec.match(/\b95%:\s*([\d.]+)/);  if (m) r.e2eP95  = parseFloat(m[1])
-    m = e2eSec.match(/\b99%:\s*([\d.]+)/);  if (m) r.e2eP99  = parseFloat(m[1])
-    m = e2eSec.match(/99\.9%:\s*([\d.]+)/); if (m) r.e2eP999 = parseFloat(m[1])
   }
 
   return r
@@ -69,7 +73,6 @@ const XLABEL   = { value: 'elapsed (mm:ss)', position: 'insideBottom' as const, 
 
 const LAT_KEYS: Array<{ label: string; pub: keyof LivePoint; e2e: keyof LivePoint; color: string }> = [
   { label: 'p50',   pub: 'pubP50',  e2e: 'e2eP50',  color: '#10b981' },
-  { label: 'p95',   pub: 'pubP95',  e2e: 'e2eP95',  color: '#f59e0b' },
   { label: 'p99',   pub: 'pubP99',  e2e: 'e2eP99',  color: '#f97316' },
   { label: 'p99.9', pub: 'pubP999', e2e: 'e2eP999', color: '#ef4444' },
 ]
@@ -87,7 +90,7 @@ function pctStats(points: LivePoint[], key: keyof LivePoint) {
 
 function StatsRow({ points, which }: { points: LivePoint[]; which: 'pub' | 'e2e' }) {
   return (
-    <div className="mt-3 grid grid-cols-4 gap-2 border-t border-slate-800 pt-2">
+    <div className="mt-3 grid grid-cols-3 gap-2 border-t border-slate-800 pt-2">
       {LAT_KEYS.map(({ label, pub, e2e, color }) => {
         const s = pctStats(points, which === 'pub' ? pub : e2e)
         return (
@@ -126,8 +129,6 @@ function Panel({ title, children, footer, height = 160 }: {
 interface Props { points: LivePoint[] }
 
 export default function LiveMetrics({ points }: Props) {
-  const hasE2E = points.some(p => p.e2eP99 != null)
-
   return (
     <div className="space-y-3">
       {/* row 1: throughput + backlog */}
@@ -167,7 +168,7 @@ export default function LiveMetrics({ points }: Props) {
       </div>
 
       {/* row 2: latency percentile charts with stats */}
-      <div className={`grid gap-3 ${hasE2E ? 'grid-cols-2' : 'grid-cols-1'}`}>
+      <div className="grid grid-cols-2 gap-3">
         <Panel title="Publish latency percentiles" height={220} footer={<StatsRow points={points} which="pub" />}>
           <LineChart data={points} margin={MARGIN}>
             <CartesianGrid strokeDasharray="3 3" stroke={GRID} />
@@ -184,8 +185,7 @@ export default function LiveMetrics({ points }: Props) {
           </LineChart>
         </Panel>
 
-        {hasE2E && (
-          <Panel title="E2E latency percentiles" height={220} footer={<StatsRow points={points} which="e2e" />}>
+        <Panel title="E2E latency percentiles" height={220} footer={<StatsRow points={points} which="e2e" />}>
             <LineChart data={points} margin={MARGIN}>
               <CartesianGrid strokeDasharray="3 3" stroke={GRID} />
               <XAxis dataKey="t" tickFormatter={fmtTime} tickCount={6} tick={TICK} label={XLABEL} />
@@ -200,7 +200,6 @@ export default function LiveMetrics({ points }: Props) {
               ))}
             </LineChart>
           </Panel>
-        )}
       </div>
     </div>
   )

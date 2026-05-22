@@ -39,7 +39,17 @@ export default function LiveRun({ runId, warmupMinutes, testMinutes, initialElap
         onLinesRef.current?.(linesRef.current)
         const parsed = parseOmbLine(e.data)
         if (parsed) {
-          setPoints(prev => [...prev, { t: elapsedRef.current, ...parsed }])
+          if (parsed.kind === 'pub') {
+            const { kind: _, ...fields } = parsed
+            setPoints(prev => [...prev, { t: elapsedRef.current, ...fields }])
+          } else {
+            // E2E line: merge into the most recent point
+            setPoints(prev => {
+              if (!prev.length) return prev
+              const last = prev[prev.length - 1]
+              return [...prev.slice(0, -1), { ...last, e2eP50: parsed.e2eP50, e2eP99: parsed.e2eP99, e2eP999: parsed.e2eP999 }]
+            })
+          }
         }
       }
     }

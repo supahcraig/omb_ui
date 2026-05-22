@@ -29,8 +29,8 @@ async def _instant_query(url: str | None, query: str) -> float | None:
 async def query_batch_size(url: str | None = None) -> float | None:
     return await _instant_query(
         url,
-        "sum(irate(vectorized_storage_log_written_bytes[30s])) / "
-        "sum(irate(vectorized_storage_log_batches_written[30s]))",
+        "sum(irate(vectorized_storage_log_written_bytes{topic!~\"^_.*\"}[5m])) / "
+        "sum(irate(vectorized_storage_log_batches_written{topic!~\"^_.*\"}[5m]))",
     )
 
 

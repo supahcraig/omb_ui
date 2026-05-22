@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { api } from '@/api/client'
-import LiveMetrics, { EMPTY_ACCUM, LiveMetricState, parseOmbLine, updateAccum } from './LiveMetrics'
+import LiveMetrics, { LivePoint, parseOmbLine } from './LiveMetrics'
 
 interface Props {
   runId: number
@@ -16,14 +16,11 @@ export default function LiveRun({ runId, warmupMinutes, testMinutes, initialElap
   const [lines, setLines] = useState<string[]>([])
   const [done, setDone] = useState(false)
   const [elapsed, setElapsed] = useState(initialElapsed)
-  const [liveMetrics, setLiveMetrics] = useState<LiveMetricState>({
-    pubRate: { ...EMPTY_ACCUM }, consRate: { ...EMPTY_ACCUM },
-    backlog: { ...EMPTY_ACCUM }, pubP99:   { ...EMPTY_ACCUM },
-  })
+  const [points, setPoints] = useState<LivePoint[]>([])
+  const elapsedRef = useRef(initialElapsed)
   const logRef = useRef<HTMLDivElement>(null)
   const totalSeconds = (warmupMinutes + testMinutes) * 60
 
-  // WebSocket for log lines
   useEffect(() => {
     const ws = new WebSocket(`ws://${window.location.host}/ws/runs/${runId}`)
     ws.onmessage = (e) => {
@@ -34,12 +31,7 @@ export default function LiveRun({ runId, warmupMinutes, testMinutes, initialElap
         setLines(prev => [...prev.slice(-499), e.data])
         const parsed = parseOmbLine(e.data)
         if (parsed) {
-          setLiveMetrics(prev => ({
-            pubRate:  parsed.pubRate  != null ? updateAccum(prev.pubRate,  parsed.pubRate)  : prev.pubRate,
-            consRate: parsed.consRate != null ? updateAccum(prev.consRate, parsed.consRate) : prev.consRate,
-            backlog:  parsed.backlog  != null ? updateAccum(prev.backlog,  parsed.backlog)  : prev.backlog,
-            pubP99:   parsed.pubP99   != null ? updateAccum(prev.pubP99,   parsed.pubP99)   : prev.pubP99,
-          }))
+          setPoints(prev => [...prev, { t: elapsedRef.current, ...parsed }])
         }
       }
     }
@@ -47,20 +39,24 @@ export default function LiveRun({ runId, warmupMinutes, testMinutes, initialElap
     return () => ws.close()
   }, [runId, onComplete])
 
-  // Auto-scroll log
   useEffect(() => {
     if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight
   }, [lines])
 
-  // Elapsed timer
   useEffect(() => {
     if (done) return
-    const t = setInterval(() => setElapsed(s => s + 1), 1000)
+    const t = setInterval(() => {
+      setElapsed(s => {
+        const next = s + 1
+        elapsedRef.current = next
+        return next
+      })
+    }, 1000)
     return () => clearInterval(t)
   }, [done])
 
   const progress = Math.min((elapsed / totalSeconds) * 100, 100)
-  const fmt = (s: number) => `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`
+  const fmt = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
 
   const handleStop = async () => {
     await api.stopRun(runId)
@@ -78,7 +74,6 @@ export default function LiveRun({ runId, warmupMinutes, testMinutes, initialElap
         )}
       </div>
 
-      {/* Progress bar */}
       <div className="bg-slate-800 rounded-full h-2">
         <div
           className="bg-indigo-500 h-2 rounded-full transition-all duration-1000"
@@ -87,13 +82,11 @@ export default function LiveRun({ runId, warmupMinutes, testMinutes, initialElap
       </div>
       <div className="text-xs text-slate-500">{progress.toFixed(0)}% complete</div>
 
-      {/* Live gauges */}
-      <LiveMetrics metrics={liveMetrics} />
+      <LiveMetrics points={points} />
 
-      {/* Log tail */}
       <div
         ref={logRef}
-        className="bg-slate-950 border border-slate-700 rounded p-3 h-96 overflow-y-auto font-mono text-xs text-slate-300 space-y-0.5"
+        className="bg-slate-950 border border-slate-700 rounded p-3 h-48 overflow-y-auto font-mono text-xs text-slate-300 space-y-0.5"
       >
         {lines.map((line, i) => (
           <div key={i} className="whitespace-pre-wrap break-all">{line}</div>

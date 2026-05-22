@@ -36,6 +36,8 @@ export default function PrometheusCharts({ runId, isRunning }: { runId: number; 
   })
 
   const allNull = samples.length > 0 && samples.every(s => s.batch_size_bytes == null && s.bytes_in_per_sec == null && s.bytes_out_per_sec == null)
+  const hasBatch = samples.some(s => s.batch_size_bytes != null)
+  const hasBytes = samples.some(s => s.bytes_in_per_sec != null || s.bytes_out_per_sec != null)
 
   if (samples.length === 0 || allNull) {
     return (
@@ -56,37 +58,41 @@ export default function PrometheusCharts({ runId, isRunning }: { runId: number; 
   }
 
   return (
-    <div className="grid grid-cols-2 gap-4">
-      <div className="bg-slate-900 border border-slate-700 rounded-lg p-5">
-        <div className="text-sm font-medium text-slate-300 mb-4">Effective batch size</div>
-        <ResponsiveContainer width="100%" height={180}>
-          <LineChart data={batchPoints(samples)} margin={MARGIN}>
-            <CartesianGrid strokeDasharray="3 3" stroke={GRID} />
-            <XAxis dataKey="t" tickFormatter={fmtTime} tickCount={9} tick={TICK} label={XLABEL} />
-            <YAxis tick={TICK} width={48}
-              label={{ value: 'KB', angle: -90, position: 'insideLeft', offset: 10, fill: '#475569', fontSize: 11 }} />
-            <Tooltip contentStyle={TT_STYLE} labelFormatter={s => `t = ${fmtTime(s as number)}`} />
-            <Line type="monotone" dataKey="batch_kb" name="batch size (KB)"
-              stroke="#f59e0b" dot={false} strokeWidth={2} connectNulls />
-          </LineChart>
-        </ResponsiveContainer>
-      </div>
+    <div className={`grid gap-4 ${hasBatch && hasBytes ? 'grid-cols-2' : 'grid-cols-1'}`}>
+      {hasBatch && (
+        <div className="bg-slate-900 border border-slate-700 rounded-lg p-5">
+          <div className="text-sm font-medium text-slate-300 mb-4">Effective batch size</div>
+          <ResponsiveContainer width="100%" height={180}>
+            <LineChart data={batchPoints(samples)} margin={MARGIN}>
+              <CartesianGrid strokeDasharray="3 3" stroke={GRID} />
+              <XAxis dataKey="t" tickFormatter={fmtTime} tickCount={9} tick={TICK} label={XLABEL} />
+              <YAxis tick={TICK} width={48}
+                label={{ value: 'KB', angle: -90, position: 'insideLeft', offset: 10, fill: '#475569', fontSize: 11 }} />
+              <Tooltip contentStyle={TT_STYLE} labelFormatter={s => `t = ${fmtTime(s as number)}`} />
+              <Line type="monotone" dataKey="batch_kb" name="batch size (KB)"
+                stroke="#f59e0b" dot={false} strokeWidth={2} connectNulls />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      )}
 
-      <div className="bg-slate-900 border border-slate-700 rounded-lg p-5">
-        <div className="text-sm font-medium text-slate-300 mb-4">Broker bytes in / out</div>
-        <ResponsiveContainer width="100%" height={180}>
-          <LineChart data={bytesPoints(samples)} margin={MARGIN}>
-            <CartesianGrid strokeDasharray="3 3" stroke={GRID} />
-            <XAxis dataKey="t" tickFormatter={fmtTime} tickCount={9} tick={TICK} label={XLABEL} />
-            <YAxis tick={TICK} width={55}
-              label={{ value: 'MB/s', angle: -90, position: 'insideLeft', offset: 10, fill: '#475569', fontSize: 11 }} />
-            <Tooltip contentStyle={TT_STYLE} labelFormatter={s => `t = ${fmtTime(s as number)}`} />
-            <Legend wrapperStyle={{ fontSize: '11px', color: '#94a3b8', paddingTop: '8px' }} />
-            <Line type="monotone" dataKey="bytes_in"  name="bytes in"  stroke="#8b5cf6" dot={false} strokeWidth={2} connectNulls />
-            <Line type="monotone" dataKey="bytes_out" name="bytes out" stroke="#06b6d4" dot={false} strokeWidth={2} connectNulls />
-          </LineChart>
-        </ResponsiveContainer>
-      </div>
+      {hasBytes && (
+        <div className="bg-slate-900 border border-slate-700 rounded-lg p-5">
+          <div className="text-sm font-medium text-slate-300 mb-4">Broker bytes in / out</div>
+          <ResponsiveContainer width="100%" height={180}>
+            <LineChart data={bytesPoints(samples)} margin={MARGIN}>
+              <CartesianGrid strokeDasharray="3 3" stroke={GRID} />
+              <XAxis dataKey="t" tickFormatter={fmtTime} tickCount={9} tick={TICK} label={XLABEL} />
+              <YAxis tick={TICK} width={55}
+                label={{ value: 'MB/s', angle: -90, position: 'insideLeft', offset: 10, fill: '#475569', fontSize: 11 }} />
+              <Tooltip contentStyle={TT_STYLE} labelFormatter={s => `t = ${fmtTime(s as number)}`} />
+              <Legend wrapperStyle={{ fontSize: '11px', color: '#94a3b8', paddingTop: '8px' }} />
+              <Line type="monotone" dataKey="bytes_in"  name="bytes in"  stroke="#8b5cf6" dot={false} strokeWidth={2} connectNulls />
+              <Line type="monotone" dataKey="bytes_out" name="bytes out" stroke="#06b6d4" dot={false} strokeWidth={2} connectNulls />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      )}
     </div>
   )
 }

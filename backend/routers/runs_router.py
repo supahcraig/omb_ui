@@ -67,6 +67,7 @@ async def _poll_prometheus(run_id: int, runner: OmbRunner, started_at: datetime)
                 query_bytes_in(),
                 query_bytes_out(),
             )
+            log.warning("run %d t=%ds: batch=%s bytes_in=%s bytes_out=%s", run_id, t, batch, b_in, b_out)
             if batch is None and b_in is None and b_out is None:
                 log.warning("run %d: all Prometheus queries returned None at t=%ds — check PROMETHEUS_URL/credentials", run_id, t)
             async with SessionLocal() as db:

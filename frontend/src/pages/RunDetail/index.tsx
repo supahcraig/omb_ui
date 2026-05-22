@@ -1,5 +1,6 @@
 import { useParams, Link } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useEffect, useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { api } from '@/api/client'
 import MetricsTiles from './MetricsTiles'
@@ -14,11 +15,17 @@ export default function RunDetailPage() {
   const runId = Number(id)
   const queryClient = useQueryClient()
 
+  const wasRunning = useRef(false)
+
   const { data: run, isLoading } = useQuery({
     queryKey: ['run', runId],
     queryFn: () => api.getRun(runId),
     refetchInterval: (query) => query.state.data?.status === 'running' ? 3000 : false,
   })
+
+  useEffect(() => {
+    if (run?.status === 'running') wasRunning.current = true
+  }, [run?.status])
 
   if (isLoading) return <div className="text-slate-400">Loading…</div>
   if (!run) return <div className="text-red-400">Run not found</div>
@@ -39,7 +46,7 @@ export default function RunDetailPage() {
         </Link>
       </div>
 
-      {run.status === 'running' && (
+      {(run.status === 'running' || wasRunning.current) && (
         <LiveRun
           runId={run.id}
           warmupMinutes={run.workload_config.warmupDurationMinutes}

@@ -28,14 +28,25 @@ function ChipInput({ row, onChange }: { row: AxisRow; onChange: (r: AxisRow) => 
         ))}
         <input
           className="bg-transparent text-xs font-mono text-slate-200 outline-none w-24 placeholder-slate-600"
-          placeholder="value + ↵"
+          placeholder="value, Enter or Tab"
           value={row.input}
-          onChange={(e) => onChange({ ...row, input: e.target.value })}
+          onChange={(e) => {
+            const val = e.target.value
+            if (val.endsWith(',')) {
+              const trimmed = val.slice(0, -1).trim()
+              if (trimmed) onChange({ ...row, values: [...row.values, trimmed], input: '' })
+            } else {
+              onChange({ ...row, input: val })
+            }
+          }}
           onKeyDown={(e) => {
-            if (e.key === 'Enter' && row.input.trim()) {
+            if ((e.key === 'Enter' || e.key === 'Tab') && row.input.trim()) {
               e.preventDefault()
               onChange({ ...row, values: [...row.values, row.input.trim()], input: '' })
             }
+          }}
+          onBlur={() => {
+            if (row.input.trim()) onChange({ ...row, values: [...row.values, row.input.trim()], input: '' })
           }}
         />
       </div>
@@ -45,6 +56,18 @@ function ChipInput({ row, onChange }: { row: AxisRow; onChange: (r: AxisRow) => 
 
 let _id = 0
 function newRow(): AxisRow { return { id: ++_id, name: '', values: [], input: '' } }
+
+const inputCls = "bg-slate-800 border border-slate-600 rounded px-3 py-1.5 text-sm text-slate-200 focus:outline-none focus:border-indigo-500"
+const sectionCls = "bg-slate-900 border border-slate-700 rounded-lg p-5 space-y-4"
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="flex flex-col gap-1">
+      <label className="text-xs text-slate-400 uppercase tracking-wide">{label}</label>
+      {children}
+    </div>
+  )
+}
 
 export default function NewSweepPage() {
   const navigate = useNavigate()
@@ -189,18 +212,6 @@ export default function NewSweepPage() {
     if (h > 0) return `${h}h ${m}m`
     return `${m}m`
   }
-
-  function Field({ label, children }: { label: string; children: React.ReactNode }) {
-    return (
-      <div className="flex flex-col gap-1">
-        <label className="text-xs text-slate-400 uppercase tracking-wide">{label}</label>
-        {children}
-      </div>
-    )
-  }
-
-  const inputCls = "bg-slate-800 border border-slate-600 rounded px-3 py-1.5 text-sm text-slate-200 focus:outline-none focus:border-indigo-500"
-  const sectionCls = "bg-slate-900 border border-slate-700 rounded-lg p-5 space-y-4"
 
   return (
     <div className="p-6 max-w-3xl">

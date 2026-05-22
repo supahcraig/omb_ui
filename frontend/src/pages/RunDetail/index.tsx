@@ -44,8 +44,14 @@ export default function RunDetailPage() {
           warmupMinutes={run.workload_config.warmupDurationMinutes}
           testMinutes={run.workload_config.testDurationMinutes}
           initialElapsed={Math.max(0, Math.floor((Date.now() - new Date(run.started_at + 'Z').getTime()) / 1000))}
-          onComplete={() => queryClient.invalidateQueries({ queryKey: ['run', runId] })}
-          onStop={() => queryClient.invalidateQueries({ queryKey: ['run', runId] })}
+          onComplete={() => {
+            queryClient.invalidateQueries({ queryKey: ['run', runId] })
+            queryClient.invalidateQueries({ queryKey: ['prometheus', runId] })
+          }}
+          onStop={() => {
+            queryClient.invalidateQueries({ queryKey: ['run', runId] })
+            queryClient.invalidateQueries({ queryKey: ['prometheus', runId] })
+          }}
         />
       )}
 

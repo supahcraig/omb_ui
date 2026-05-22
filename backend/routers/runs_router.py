@@ -1,6 +1,6 @@
 import asyncio
 from datetime import datetime
-from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
@@ -124,7 +124,6 @@ async def list_runs(db: AsyncSession = Depends(get_db)):
 @router.post("", response_model=RunOut, status_code=201)
 async def create_run(
     body: RunCreate,
-    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     runner: OmbRunner = Depends(get_runner),
 ):
@@ -136,8 +135,8 @@ async def create_run(
     await db.refresh(run)
 
     await runner.start(run.id)
-    background_tasks.add_task(_finish_run, run.id, runner)
-    background_tasks.add_task(_poll_prometheus, run.id, runner, run.started_at)
+    asyncio.create_task(_finish_run(run.id, runner))
+    asyncio.create_task(_poll_prometheus(run.id, runner, run.started_at))
 
     # Re-fetch with selectinload so Pydantic can access the metrics relationship
     # without triggering a lazy-load outside the async session greenlet.

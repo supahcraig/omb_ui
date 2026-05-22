@@ -47,7 +47,6 @@ class PrometheusSample(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     run_id: Mapped[int] = mapped_column(Integer, ForeignKey("runs.id", ondelete="CASCADE"), index=True)
     t: Mapped[int] = mapped_column(Integer)
-    batch_size_bytes: Mapped[float | None] = mapped_column(Float, nullable=True)
     bytes_in_per_sec: Mapped[float | None] = mapped_column(Float, nullable=True)
     bytes_out_per_sec: Mapped[float | None] = mapped_column(Float, nullable=True)
 

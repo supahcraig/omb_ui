@@ -26,20 +26,6 @@ async def _instant_query(url: str | None, query: str) -> float | None:
         return None
 
 
-async def query_batch_size(url: str | None = None) -> float | None:
-    written = await _instant_query(
-        url,
-        "sum(irate(vectorized_storage_log_written_bytes{topic!~\"^_.*\"}[5m]))",
-    )
-    batches = await _instant_query(
-        url,
-        "sum(irate(vectorized_storage_log_batches_written{topic!~\"^_.*\"}[5m]))",
-    )
-    if written is None or batches is None or batches == 0:
-        return None
-    return written / batches
-
-
 async def query_bytes_in(url: str | None = None) -> float | None:
     return await _instant_query(url, "sum(irate(redpanda_rpc_received_bytes[30s]))")
 

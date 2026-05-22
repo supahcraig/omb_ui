@@ -102,7 +102,6 @@ class RunListItem(BaseModel):
 
 class PrometheusSampleOut(BaseModel):
     t: int
-    batch_size_bytes: float | None
     bytes_in_per_sec: float | None
     bytes_out_per_sec: float | None
     model_config = {"from_attributes": True}

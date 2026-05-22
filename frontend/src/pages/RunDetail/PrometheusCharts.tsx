@@ -13,13 +13,6 @@ const TT_STYLE = { background: '#1e293b', border: '1px solid #334155', borderRad
 const MARGIN   = { top: 5, right: 20, left: 10, bottom: 24 }
 const XLABEL   = { value: 'elapsed (mm:ss)', position: 'insideBottom' as const, offset: -12, fill: '#475569', fontSize: 11 }
 
-function batchPoints(samples: PrometheusSample[]) {
-  return samples.map(s => ({
-    t: s.t,
-    batch_kb: s.batch_size_bytes != null ? Math.round(s.batch_size_bytes / 1024) : null,
-  }))
-}
-
 function bytesPoints(samples: PrometheusSample[]) {
   return samples.map(s => ({
     t: s.t,
@@ -35,8 +28,7 @@ export default function PrometheusCharts({ runId, isRunning }: { runId: number; 
     refetchInterval: isRunning ? 10000 : false,
   })
 
-  const allNull = samples.length > 0 && samples.every(s => s.batch_size_bytes == null && s.bytes_in_per_sec == null && s.bytes_out_per_sec == null)
-  const hasBatch = samples.some(s => s.batch_size_bytes != null)
+  const allNull = samples.length > 0 && samples.every(s => s.bytes_in_per_sec == null && s.bytes_out_per_sec == null)
   const hasBytes = samples.some(s => s.bytes_in_per_sec != null || s.bytes_out_per_sec != null)
 
   if (samples.length === 0 || allNull) {
@@ -58,24 +50,7 @@ export default function PrometheusCharts({ runId, isRunning }: { runId: number; 
   }
 
   return (
-    <div className={`grid gap-4 ${hasBatch && hasBytes ? 'grid-cols-2' : 'grid-cols-1'}`}>
-      {hasBatch && (
-        <div className="bg-slate-900 border border-slate-700 rounded-lg p-5">
-          <div className="text-sm font-medium text-slate-300 mb-4">Effective batch size</div>
-          <ResponsiveContainer width="100%" height={180}>
-            <LineChart data={batchPoints(samples)} margin={MARGIN}>
-              <CartesianGrid strokeDasharray="3 3" stroke={GRID} />
-              <XAxis dataKey="t" tickFormatter={fmtTime} tickCount={9} tick={TICK} label={XLABEL} />
-              <YAxis tick={TICK} width={48}
-                label={{ value: 'KB', angle: -90, position: 'insideLeft', offset: 10, fill: '#475569', fontSize: 11 }} />
-              <Tooltip contentStyle={TT_STYLE} labelFormatter={s => `t = ${fmtTime(s as number)}`} />
-              <Line type="monotone" dataKey="batch_kb" name="batch size (KB)"
-                stroke="#f59e0b" dot={false} strokeWidth={2} connectNulls />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
-      )}
-
+    <div className="grid grid-cols-1">
       {hasBytes && (
         <div className="bg-slate-900 border border-slate-700 rounded-lg p-5">
           <div className="text-sm font-medium text-slate-300 mb-4">Broker bytes in / out</div>

@@ -88,7 +88,6 @@ export interface RunListItem {
 
 export interface PrometheusSample {
   t: number
-  batch_size_bytes: number | null
   bytes_in_per_sec: number | null
   bytes_out_per_sec: number | null
 }

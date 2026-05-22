@@ -39,6 +39,7 @@ class Metrics(Base):
     end_to_end_latency_max: Mapped[float | None] = mapped_column(Float, nullable=True)
     consume_rate_avg: Mapped[float | None] = mapped_column(Float, nullable=True)
     backlog_avg: Mapped[float | None] = mapped_column(Float, nullable=True)
+    backlog_timeseries: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     throughput_timeseries: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     run: Mapped["Run"] = relationship("Run", back_populates="metrics")
 
@@ -49,6 +50,7 @@ class PrometheusSample(Base):
     t: Mapped[int] = mapped_column(Integer)
     bytes_in_per_sec: Mapped[float | None] = mapped_column(Float, nullable=True)
     bytes_out_per_sec: Mapped[float | None] = mapped_column(Float, nullable=True)
+    records_per_sec: Mapped[float | None] = mapped_column(Float, nullable=True)
 
 class Sweep(Base):
     __tablename__ = "sweeps"

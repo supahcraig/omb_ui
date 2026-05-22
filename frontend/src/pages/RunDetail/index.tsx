@@ -5,6 +5,7 @@ import { api } from '@/api/client'
 import MetricsTiles from './MetricsTiles'
 import LatencyBars from './LatencyBars'
 import ThroughputChart from './ThroughputChart'
+import BacklogChart from './BacklogChart'
 import PrometheusCharts from './PrometheusCharts'
 import LiveRun from '../NewRun/LiveRun'
 
@@ -59,6 +60,10 @@ export default function RunDetailPage() {
 
       {run.metrics?.throughput_timeseries && (
         <ThroughputChart timeseries={run.metrics.throughput_timeseries} />
+      )}
+
+      {run.metrics?.backlog_timeseries && (
+        <BacklogChart timeseries={run.metrics.backlog_timeseries} />
       )}
 
       {run.status !== 'pending' && (

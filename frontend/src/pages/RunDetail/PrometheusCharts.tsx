@@ -21,6 +21,13 @@ function bytesPoints(samples: PrometheusSample[]) {
   }))
 }
 
+function recordsPoints(samples: PrometheusSample[]) {
+  return samples.map(s => ({
+    t: s.t,
+    rps: s.records_per_sec != null ? Math.round(s.records_per_sec) : null,
+  }))
+}
+
 export default function PrometheusCharts({ runId, isRunning }: { runId: number; isRunning: boolean }) {
   const { data: samples = [] } = useQuery({
     queryKey: ['prometheus', runId],
@@ -28,8 +35,11 @@ export default function PrometheusCharts({ runId, isRunning }: { runId: number; 
     refetchInterval: isRunning ? 10000 : false,
   })
 
-  const allNull = samples.length > 0 && samples.every(s => s.bytes_in_per_sec == null && s.bytes_out_per_sec == null)
-  const hasBytes = samples.some(s => s.bytes_in_per_sec != null || s.bytes_out_per_sec != null)
+  const allNull = samples.length > 0 && samples.every(
+    s => s.bytes_in_per_sec == null && s.bytes_out_per_sec == null && s.records_per_sec == null
+  )
+  const hasBytes   = samples.some(s => s.bytes_in_per_sec != null || s.bytes_out_per_sec != null)
+  const hasRecords = samples.some(s => s.records_per_sec != null)
 
   if (samples.length === 0 || allNull) {
     return (
@@ -50,7 +60,7 @@ export default function PrometheusCharts({ runId, isRunning }: { runId: number; 
   }
 
   return (
-    <div className="grid grid-cols-1">
+    <div className={`grid gap-4 ${hasBytes && hasRecords ? 'grid-cols-2' : 'grid-cols-1'}`}>
       {hasBytes && (
         <div className="bg-slate-900 border border-slate-700 rounded-lg p-5">
           <div className="text-sm font-medium text-slate-300 mb-4">Broker bytes in / out</div>
@@ -64,6 +74,25 @@ export default function PrometheusCharts({ runId, isRunning }: { runId: number; 
               <Legend wrapperStyle={{ fontSize: '11px', color: '#94a3b8', paddingTop: '8px' }} />
               <Line type="monotone" dataKey="bytes_in"  name="bytes in"  stroke="#8b5cf6" dot={false} strokeWidth={2} connectNulls />
               <Line type="monotone" dataKey="bytes_out" name="bytes out" stroke="#06b6d4" dot={false} strokeWidth={2} connectNulls />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+
+      {hasRecords && (
+        <div className="bg-slate-900 border border-slate-700 rounded-lg p-5">
+          <div className="text-sm font-medium text-slate-300 mb-4">Records produced / sec</div>
+          <ResponsiveContainer width="100%" height={180}>
+            <LineChart data={recordsPoints(samples)} margin={MARGIN}>
+              <CartesianGrid strokeDasharray="3 3" stroke={GRID} />
+              <XAxis dataKey="t" tickFormatter={fmtTime} tickCount={9} tick={TICK} label={XLABEL} />
+              <YAxis tick={TICK} width={65}
+                tickFormatter={v => (v as number).toLocaleString()}
+                label={{ value: 'msg/s', angle: -90, position: 'insideLeft', offset: 10, fill: '#475569', fontSize: 11 }} />
+              <Tooltip contentStyle={TT_STYLE} labelFormatter={s => `t = ${fmtTime(s as number)}`}
+                formatter={v => [(v as number).toLocaleString(), 'records/sec']} />
+              <Line type="monotone" dataKey="rps" name="records/sec"
+                stroke="#3b82f6" dot={false} strokeWidth={2} connectNulls />
             </LineChart>
           </ResponsiveContainer>
         </div>

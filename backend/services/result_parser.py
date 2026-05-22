@@ -26,6 +26,10 @@ def parse_result_file(path: str) -> dict:
         "end_to_end_latency_p999": data["aggregatedEndToEndLatency999pct"],
         "end_to_end_latency_p9999": data["aggregatedEndToEndLatency9999pct"],
         "end_to_end_latency_max": data["aggregatedEndToEndLatencyMax"],
+        "backlog_timeseries": {
+            "backlog": data["backlog"],
+            "sample_rate_ms": data["sampleRateMillis"],
+        },
         "throughput_timeseries": {
             "publish_rate": data["publishRate"],
             "consume_rate": data["consumeRate"],

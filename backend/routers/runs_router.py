@@ -10,7 +10,7 @@ from backend.schemas import RunCreate, RunOut, RunListItem
 from backend.services.yaml_io import read_driver, read_workload
 from backend.services.result_parser import parse_result_file
 from backend.services.omb_runner import OmbRunner
-from backend.services.prometheus_client import query_bytes_in, query_bytes_out
+from backend.services.prometheus_client import query_bytes_in, query_bytes_out, query_records_per_sec
 
 router = APIRouter(prefix="/api/runs", tags=["runs"])
 
@@ -62,17 +62,19 @@ async def _poll_prometheus(run_id: int, runner: OmbRunner, started_at: datetime)
     while not runner.is_done(run_id):
         try:
             t = int((datetime.utcnow() - started_at).total_seconds())
-            b_in, b_out = await asyncio.gather(
+            b_in, b_out, rps = await asyncio.gather(
                 query_bytes_in(),
                 query_bytes_out(),
+                query_records_per_sec(),
             )
-            if b_in is None and b_out is None:
+            if b_in is None and b_out is None and rps is None:
                 log.warning("run %d: all Prometheus queries returned None at t=%ds — check PROMETHEUS_URL/credentials", run_id, t)
             async with SessionLocal() as db:
                 db.add(PrometheusSample(
                     run_id=run_id, t=t,
                     bytes_in_per_sec=b_in,
                     bytes_out_per_sec=b_out,
+                    records_per_sec=rps,
                 ))
                 await db.commit()
         except Exception as e:
@@ -82,15 +84,17 @@ async def _poll_prometheus(run_id: int, runner: OmbRunner, started_at: datetime)
     # One final sample captured after the run ends
     try:
         t = int((datetime.utcnow() - started_at).total_seconds())
-        b_in, b_out = await asyncio.gather(
+        b_in, b_out, rps = await asyncio.gather(
             query_bytes_in(),
             query_bytes_out(),
+            query_records_per_sec(),
         )
         async with SessionLocal() as db:
             db.add(PrometheusSample(
                 run_id=run_id, t=t,
                 bytes_in_per_sec=b_in,
                 bytes_out_per_sec=b_out,
+                records_per_sec=rps,
             ))
             await db.commit()
     except Exception:

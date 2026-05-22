@@ -32,3 +32,10 @@ async def query_bytes_in(url: str | None = None) -> float | None:
 
 async def query_bytes_out(url: str | None = None) -> float | None:
     return await _instant_query(url, "sum(irate(redpanda_rpc_sent_bytes[30s]))")
+
+
+async def query_records_per_sec(url: str | None = None) -> float | None:
+    return await _instant_query(
+        url,
+        'sum(irate(redpanda_kafka_records_produced_total{topic!~"^_.*"}[30s]))',
+    )

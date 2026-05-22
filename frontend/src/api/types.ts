@@ -53,6 +53,10 @@ export interface Metrics {
   end_to_end_latency_max: number | null
   consume_rate_avg: number | null
   backlog_avg: number | null
+  backlog_timeseries: {
+    backlog: number[]
+    sample_rate_ms: number
+  } | null
   throughput_timeseries: {
     publish_rate: number[]
     consume_rate: number[]
@@ -90,6 +94,7 @@ export interface PrometheusSample {
   t: number
   bytes_in_per_sec: number | null
   bytes_out_per_sec: number | null
+  records_per_sec: number | null
 }
 
 export interface Sweep {

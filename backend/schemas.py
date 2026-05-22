@@ -65,6 +65,7 @@ class MetricsOut(BaseModel):
     end_to_end_latency_max: float | None
     consume_rate_avg: float | None
     backlog_avg: float | None
+    backlog_timeseries: dict | None
     throughput_timeseries: dict | None
 
     model_config = {"from_attributes": True}
@@ -104,6 +105,7 @@ class PrometheusSampleOut(BaseModel):
     t: int
     bytes_in_per_sec: float | None
     bytes_out_per_sec: float | None
+    records_per_sec: float | None
     model_config = {"from_attributes": True}
 
 

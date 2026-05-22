@@ -1,6 +1,6 @@
 import { useParams, Link } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { api } from '@/api/client'
 import MetricsTiles from './MetricsTiles'
@@ -16,6 +16,10 @@ export default function RunDetailPage() {
   const queryClient = useQueryClient()
 
   const wasRunning = useRef(false)
+  const [liveLines, setLiveLines] = useState<string[]>([])
+  const logRef = useRef<HTMLDivElement>(null)
+
+  const handleLines = useCallback((lines: string[]) => setLiveLines(lines), [])
 
   const { data: run, isLoading } = useQuery({
     queryKey: ['run', runId],
@@ -27,8 +31,14 @@ export default function RunDetailPage() {
     if (run?.status === 'running') wasRunning.current = true
   }, [run?.status])
 
+  useEffect(() => {
+    if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight
+  }, [liveLines])
+
   if (isLoading) return <div className="text-slate-400">Loading…</div>
   if (!run) return <div className="text-red-400">Run not found</div>
+
+  const showLive = run.status === 'running' || wasRunning.current
 
   return (
     <div className="space-y-6">
@@ -46,7 +56,7 @@ export default function RunDetailPage() {
         </Link>
       </div>
 
-      {(run.status === 'running' || wasRunning.current) && (
+      {showLive && (
         <LiveRun
           runId={run.id}
           warmupMinutes={run.workload_config.warmupDurationMinutes}
@@ -60,16 +70,18 @@ export default function RunDetailPage() {
             queryClient.invalidateQueries({ queryKey: ['run', runId] })
             queryClient.invalidateQueries({ queryKey: ['prometheus', runId] })
           }}
+          onLines={handleLines}
         />
       )}
 
       {run.metrics && <MetricsTiles metrics={run.metrics} />}
 
-      {run.metrics?.throughput_timeseries && (
+      {/* Post-run timeseries charts only when we didn't watch this run live
+          (if we did, the live charts already show throughput and backlog) */}
+      {!showLive && run.metrics?.throughput_timeseries && (
         <ThroughputChart timeseries={run.metrics.throughput_timeseries} />
       )}
-
-      {run.metrics?.backlog_timeseries && (
+      {!showLive && run.metrics?.backlog_timeseries && (
         <BacklogChart timeseries={run.metrics.backlog_timeseries} />
       )}
 
@@ -83,6 +95,17 @@ export default function RunDetailPage() {
         </div>
       )}
 
+      {showLive && liveLines.length > 0 && (
+        <div
+          ref={logRef}
+          className="bg-slate-950 border border-slate-700 rounded p-3 h-48 overflow-y-auto font-mono text-xs text-slate-300 space-y-0.5"
+        >
+          {liveLines.map((line, i) => (
+            <div key={i} className="whitespace-pre-wrap break-all">{line}</div>
+          ))}
+          {run.status === 'running' && <div className="text-slate-600 animate-pulse">▌</div>}
+        </div>
+      )}
 
       <details className="bg-slate-900 border border-slate-700 rounded-lg">
         <summary className="px-5 py-3 cursor-pointer text-sm text-slate-400 hover:text-white">

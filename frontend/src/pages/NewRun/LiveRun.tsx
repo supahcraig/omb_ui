@@ -10,15 +10,15 @@ interface Props {
   initialElapsed?: number
   onComplete: () => void
   onStop: () => void
+  onLines?: (lines: string[]) => void
 }
 
-export default function LiveRun({ runId, warmupMinutes, testMinutes, initialElapsed = 0, onComplete, onStop }: Props) {
-  const [lines, setLines] = useState<string[]>([])
+export default function LiveRun({ runId, warmupMinutes, testMinutes, initialElapsed = 0, onComplete, onStop, onLines }: Props) {
   const [done, setDone] = useState(false)
   const [elapsed, setElapsed] = useState(initialElapsed)
   const [points, setPoints] = useState<LivePoint[]>([])
   const elapsedRef = useRef(initialElapsed)
-  const logRef = useRef<HTMLDivElement>(null)
+  const linesRef = useRef<string[]>([])
   const totalSeconds = (warmupMinutes + testMinutes) * 60
 
   useEffect(() => {
@@ -28,7 +28,8 @@ export default function LiveRun({ runId, warmupMinutes, testMinutes, initialElap
         const msg = JSON.parse(e.data)
         if (msg.type === 'done') { setDone(true); onComplete() }
       } catch (_e) {
-        setLines(prev => [...prev.slice(-499), e.data])
+        linesRef.current = [...linesRef.current.slice(-499), e.data]
+        onLines?.(linesRef.current)
         const parsed = parseOmbLine(e.data)
         if (parsed) {
           setPoints(prev => [...prev, { t: elapsedRef.current, ...parsed }])
@@ -37,11 +38,7 @@ export default function LiveRun({ runId, warmupMinutes, testMinutes, initialElap
     }
     ws.onerror = () => setDone(true)
     return () => ws.close()
-  }, [runId, onComplete])
-
-  useEffect(() => {
-    if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight
-  }, [lines])
+  }, [runId, onComplete, onLines])
 
   useEffect(() => {
     if (done) return
@@ -83,16 +80,6 @@ export default function LiveRun({ runId, warmupMinutes, testMinutes, initialElap
       <div className="text-xs text-slate-500">{progress.toFixed(0)}% complete</div>
 
       <LiveMetrics points={points} />
-
-      <div
-        ref={logRef}
-        className="bg-slate-950 border border-slate-700 rounded p-3 h-48 overflow-y-auto font-mono text-xs text-slate-300 space-y-0.5"
-      >
-        {lines.map((line, i) => (
-          <div key={i} className="whitespace-pre-wrap break-all">{line}</div>
-        ))}
-        {!done && <div className="text-slate-600 animate-pulse">▌</div>}
-      </div>
     </div>
   )
 }

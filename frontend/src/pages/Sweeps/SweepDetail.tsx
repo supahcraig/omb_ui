@@ -183,16 +183,24 @@ export default function SweepDetailPage() {
               <th className="px-3 py-3 text-right">Pub p99</th>
               <th className="px-3 py-3 text-right">E2E p99</th>
               <th className="px-3 py-3 text-left">Status</th>
-              <th className="px-3 py-3 text-left"></th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-800">
             {sweep.runs.map((run, idx) => {
               const isPending = run.status === 'pending'
               const isRunning = run.status === 'running'
-              const rowCls = isRunning ? 'bg-slate-800/60' : isPending ? 'opacity-40' : ''
+              const clickable = !isPending
+              const rowCls = [
+                isRunning ? 'bg-slate-800/60' : isPending ? 'opacity-40' : '',
+                clickable ? 'cursor-pointer hover:bg-slate-800' : '',
+                'transition-colors',
+              ].join(' ')
               return (
-                <tr key={run.id} className={`${rowCls} hover:bg-slate-800 transition-colors`}>
+                <tr
+                  key={run.id}
+                  className={rowCls}
+                  onClick={() => clickable && navigate(`/runs/${run.id}`)}
+                >
                   <td className="px-3 py-2.5 text-slate-500">{idx + 1}</td>
                   {paramKeys.map(k => (
                     <td key={k} className="px-3 py-2.5 font-mono text-indigo-300 text-xs">
@@ -210,16 +218,6 @@ export default function SweepDetailPage() {
                   </td>
                   <td className="px-3 py-2.5">
                     <StatusBadge status={run.status} />
-                  </td>
-                  <td className="px-3 py-2.5">
-                    {!isPending && (
-                      <button
-                        onClick={() => navigate(`/runs/${run.id}`)}
-                        className="text-indigo-400 hover:underline text-xs"
-                      >
-                        Run #{run.id}
-                      </button>
-                    )}
                   </td>
                 </tr>
               )

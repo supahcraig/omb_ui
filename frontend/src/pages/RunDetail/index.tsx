@@ -1,4 +1,4 @@
-import { useParams, Link } from 'react-router-dom'
+import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
@@ -14,6 +14,7 @@ export default function RunDetailPage() {
   const { id } = useParams<{ id: string }>()
   const runId = Number(id)
   const queryClient = useQueryClient()
+  const navigate = useNavigate()
 
   const wasRunning = useRef(false)
   const [liveLines, setLiveLines] = useState<string[]>([])
@@ -25,6 +26,12 @@ export default function RunDetailPage() {
     queryKey: ['run', runId],
     queryFn: () => api.getRun(runId),
     refetchInterval: (query) => query.state.data?.status === 'running' ? 3000 : false,
+  })
+
+  const { data: sweep } = useQuery({
+    queryKey: ['sweep', run?.sweep_id],
+    queryFn: () => api.getSweep(run!.sweep_id!),
+    enabled: !!run?.sweep_id,
   })
 
   useEffect(() => {
@@ -40,8 +47,64 @@ export default function RunDetailPage() {
 
   const showLive = run.status === 'running' || wasRunning.current
 
+  const paramKeys = sweep ? Object.keys(sweep.parameter_axes) : []
+
   return (
     <div className="space-y-6">
+
+      {/* Sweep navigation — only shown when this run belongs to a sweep */}
+      {sweep && (
+        <div className="bg-slate-900 border border-slate-700 rounded-lg p-4 space-y-3">
+          <div className="flex items-center gap-3 flex-wrap">
+            <Link to={`/sweeps/${sweep.id}`} className="text-sm text-indigo-400 hover:text-indigo-300 shrink-0">
+              ← {sweep.name}
+            </Link>
+            {run.sweep_params && (
+              <div className="flex gap-1.5 flex-wrap">
+                {Object.entries(run.sweep_params).map(([k, v]) => (
+                  <span key={k} className="text-xs font-mono px-2 py-0.5 rounded bg-indigo-900/50 text-indigo-300 border border-indigo-800/50">
+                    {k} = {v}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+          {paramKeys.length > 0 && (
+            <div className="space-y-1">
+              <div className="text-[10px] text-slate-500 uppercase tracking-wider">
+                {paramKeys.join(' · ')}
+              </div>
+              <div className="flex gap-1 flex-wrap">
+                {sweep.runs.map((r, i) => {
+                  const isCurrent = r.id === runId
+                  const isPending = r.status === 'pending'
+                  const label = r.sweep_params
+                    ? Object.values(r.sweep_params).join(' · ')
+                    : `Run ${i + 1}`
+                  return (
+                    <button
+                      key={r.id}
+                      onClick={() => !isPending && navigate(`/runs/${r.id}`)}
+                      disabled={isPending}
+                      title={r.sweep_params ? Object.entries(r.sweep_params).map(([k, v]) => `${k}=${v}`).join(', ') : undefined}
+                      className={`text-xs font-mono px-3 py-1.5 rounded border transition-colors ${
+                        isCurrent
+                          ? 'bg-indigo-600 border-indigo-500 text-white'
+                          : isPending
+                            ? 'bg-slate-800 border-slate-700 text-slate-600 cursor-not-allowed'
+                            : 'bg-slate-800 border-slate-700 text-slate-300 hover:border-indigo-500 hover:text-indigo-300 cursor-pointer'
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-semibold">Run #{run.id}{run.name ? ` — ${run.name}` : ''}</h1>

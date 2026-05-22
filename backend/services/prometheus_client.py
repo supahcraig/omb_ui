@@ -45,7 +45,7 @@ async def query_batch_size(url: str | None = None) -> float | None:
         url,
         f"sum(irate({BATCHES_WRITTEN}{{topic!~\"^_.*\"}}[5m]))",
     )
-    log.debug("batch_size components: written=%s batches=%s", written, batches)
+    log.warning("batch_size components: written=%s batches=%s", written, batches)
     if written is None or batches is None or batches == 0:
         return None
     return written / batches

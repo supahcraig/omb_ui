@@ -16,7 +16,7 @@ const TT_STYLE = { background: '#1e293b', border: '1px solid #334155', borderRad
 export default function BacklogChart({ timeseries }: { timeseries: BacklogTimeseries }) {
   const data = timeseries.backlog.map((v, i) => ({
     t: Math.round((i * timeseries.sample_rate_ms) / 1000),
-    backlog: v,
+    backlog: Math.max(0, v),
   }))
 
   return (

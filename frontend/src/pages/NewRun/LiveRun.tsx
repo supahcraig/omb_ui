@@ -21,15 +21,22 @@ export default function LiveRun({ runId, warmupMinutes, testMinutes, initialElap
   const linesRef = useRef<string[]>([])
   const totalSeconds = (warmupMinutes + testMinutes) * 60
 
+  // Keep callback refs current so the WebSocket effect never needs to re-run
+  // when parent re-renders (which would close/reopen the socket).
+  const onCompleteRef = useRef(onComplete)
+  const onLinesRef    = useRef(onLines)
+  onCompleteRef.current = onComplete
+  onLinesRef.current    = onLines
+
   useEffect(() => {
     const ws = new WebSocket(`ws://${window.location.host}/ws/runs/${runId}`)
     ws.onmessage = (e) => {
       try {
         const msg = JSON.parse(e.data)
-        if (msg.type === 'done') { setDone(true); onComplete() }
+        if (msg.type === 'done') { setDone(true); onCompleteRef.current() }
       } catch (_e) {
         linesRef.current = [...linesRef.current.slice(-499), e.data]
-        onLines?.(linesRef.current)
+        onLinesRef.current?.(linesRef.current)
         const parsed = parseOmbLine(e.data)
         if (parsed) {
           setPoints(prev => [...prev, { t: elapsedRef.current, ...parsed }])
@@ -38,7 +45,7 @@ export default function LiveRun({ runId, warmupMinutes, testMinutes, initialElap
     }
     ws.onerror = () => setDone(true)
     return () => ws.close()
-  }, [runId, onComplete, onLines])
+  }, [runId]) // runId only — callbacks accessed via refs
 
   useEffect(() => {
     if (done) return

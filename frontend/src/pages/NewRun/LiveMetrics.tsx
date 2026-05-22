@@ -6,7 +6,9 @@ import {
 export interface LivePoint {
   t: number
   pubRate:  number | null
+  pubMBs:   number | null
   consRate: number | null
+  consMBs:  number | null
   backlog:  number | null
   pubP50:   number | null
   pubP99:   number | null
@@ -37,16 +39,18 @@ export function parseOmbLine(line: string): ParsedOmbLine | null {
 
   const r = {
     kind: 'pub' as const,
-    pubRate: null as number | null, consRate: null as number | null, backlog: null as number | null,
+    pubRate: null as number | null, pubMBs: null as number | null,
+    consRate: null as number | null, consMBs: null as number | null,
+    backlog: null as number | null,
     pubP50: null as number | null, pubP99: null as number | null, pubP999: null as number | null,
     e2eP50: null as number | null, e2eP99: null as number | null, e2eP999: null as number | null,
   }
 
-  m = line.match(/Pub rate\s+([\d.]+)\s+msg\/s/)
-  if (m) r.pubRate = parseFloat(m[1])
+  m = line.match(/Pub rate\s+([\d.]+)\s+msg\/s\s+\/\s+([\d.]+)\s+MB\/s/)
+  if (m) { r.pubRate = parseFloat(m[1]); r.pubMBs = parseFloat(m[2]) }
 
-  m = line.match(/Cons rate\s+([\d.]+)\s+msg\/s/)
-  if (m) r.consRate = parseFloat(m[1])
+  m = line.match(/Cons rate\s+([\d.]+)\s+msg\/s\s+\/\s+([\d.]+)\s+MB\/s/)
+  if (m) { r.consRate = parseFloat(m[1]); r.consMBs = parseFloat(m[2]) }
 
   // Store full message count, not K-multiple
   m = line.match(/Backlog:\s*([\d.]+)\s*K/)
@@ -65,11 +69,11 @@ export function parseOmbLine(line: string): ParsedOmbLine | null {
 // ── chart constants ──────────────────────────────────────────────────────────
 
 const fmtTime  = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
-const TICK     = { fill: '#64748b', fontSize: 11 }
+const TICK     = { fill: '#94a3b8', fontSize: 12 }
 const GRID     = '#1e293b'
 const TT_STYLE = { background: '#1e293b', border: '1px solid #334155', borderRadius: '6px', fontSize: '12px' }
 const MARGIN   = { top: 5, right: 16, left: 8, bottom: 22 }
-const XLABEL   = { value: 'elapsed (mm:ss)', position: 'insideBottom' as const, offset: -10, fill: '#475569', fontSize: 10 }
+const XLABEL   = { value: 'elapsed (mm:ss)', position: 'insideBottom' as const, offset: -10, fill: '#94a3b8', fontSize: 12 }
 
 const LAT_KEYS: Array<{ label: string; pub: keyof LivePoint; e2e: keyof LivePoint; color: string }> = [
   { label: 'p50',   pub: 'pubP50',  e2e: 'e2eP50',  color: '#10b981' },
@@ -112,12 +116,24 @@ function StatsRow({ points, which }: { points: LivePoint[]; which: 'pub' | 'e2e'
   )
 }
 
-function Panel({ title, children, footer, height = 160 }: {
-  title: string; children: React.ReactNode; footer?: React.ReactNode; height?: number
+const SOURCE_BADGE = {
+  omb:      'bg-slate-800 text-slate-500 border border-slate-700',
+  redpanda: 'bg-red-900/40 text-red-400 border border-red-800/60',
+}
+
+function Panel({ title, children, footer, height = 160, source }: {
+  title: string; children: React.ReactNode; footer?: React.ReactNode; height?: number; source?: keyof typeof SOURCE_BADGE
 }) {
   return (
     <div className="bg-slate-900 border border-slate-700 rounded-lg p-4">
-      <div className="text-xs font-medium text-slate-400 mb-2">{title}</div>
+      <div className="flex items-center gap-2 mb-2">
+        <span className="text-xs font-medium text-slate-400">{title}</span>
+        {source && (
+          <span className={`text-[10px] font-medium px-1.5 py-px rounded uppercase tracking-wide ${SOURCE_BADGE[source]}`}>
+            {source === 'redpanda' ? 'Redpanda' : 'OMB'}
+          </span>
+        )}
+      </div>
       <ResponsiveContainer width="100%" height={height}>{children as React.ReactElement}</ResponsiveContainer>
       {footer}
     </div>
@@ -131,23 +147,37 @@ interface Props { points: LivePoint[] }
 export default function LiveMetrics({ points }: Props) {
   return (
     <div className="space-y-3">
-      {/* row 1: throughput + backlog */}
-      <div className="grid grid-cols-2 gap-3">
-        <Panel title="Throughput">
+      {/* row 1: throughput msg/s + MB/s + backlog */}
+      <div className="grid grid-cols-3 gap-3">
+        <Panel title="Throughput (msg/s)" source="omb">
           <LineChart data={points} margin={MARGIN}>
             <CartesianGrid strokeDasharray="3 3" stroke={GRID} />
             <XAxis dataKey="t" tickFormatter={fmtTime} tickCount={6} tick={TICK} label={XLABEL} />
             <YAxis tick={TICK} width={60} tickFormatter={v => (v as number).toLocaleString()}
-              label={{ value: 'msg/s', angle: -90, position: 'insideLeft', offset: 10, fill: '#475569', fontSize: 10 }} />
+              label={{ value: 'msg/s', angle: -90, position: 'insideLeft', offset: 10, fill: '#94a3b8', fontSize: 12 }} />
             <Tooltip contentStyle={TT_STYLE} labelFormatter={s => `t = ${fmtTime(s as number)}`}
               formatter={v => [(v as number).toLocaleString(), '']} />
-            <Legend wrapperStyle={{ fontSize: '10px', color: '#94a3b8', paddingTop: '4px' }} />
+            <Legend wrapperStyle={{ fontSize: '12px', color: '#94a3b8', paddingTop: '4px' }} />
             <Line type="monotone" dataKey="pubRate"  name="pub rate"  stroke="#6366f1" dot={false} strokeWidth={2} connectNulls />
             <Line type="monotone" dataKey="consRate" name="cons rate" stroke="#10b981" dot={false} strokeWidth={2} connectNulls />
           </LineChart>
         </Panel>
 
-        <Panel title="Consumer backlog">
+        <Panel title="Throughput (MB/s)" source="omb">
+          <LineChart data={points} margin={MARGIN}>
+            <CartesianGrid strokeDasharray="3 3" stroke={GRID} />
+            <XAxis dataKey="t" tickFormatter={fmtTime} tickCount={6} tick={TICK} label={XLABEL} />
+            <YAxis tick={TICK} width={48} tickFormatter={v => `${(v as number).toFixed(0)}`}
+              label={{ value: 'MB/s', angle: -90, position: 'insideLeft', offset: 10, fill: '#94a3b8', fontSize: 12 }} />
+            <Tooltip contentStyle={TT_STYLE} labelFormatter={s => `t = ${fmtTime(s as number)}`}
+              formatter={v => [`${(v as number).toFixed(1)} MB/s`, '']} />
+            <Legend wrapperStyle={{ fontSize: '12px', color: '#94a3b8', paddingTop: '4px' }} />
+            <Line type="monotone" dataKey="pubMBs"  name="pub MB/s"  stroke="#6366f1" dot={false} strokeWidth={2} connectNulls />
+            <Line type="monotone" dataKey="consMBs" name="cons MB/s" stroke="#10b981" dot={false} strokeWidth={2} connectNulls />
+          </LineChart>
+        </Panel>
+
+        <Panel title="Consumer backlog" source="omb">
           <AreaChart data={points} margin={MARGIN}>
             <defs>
               <linearGradient id="liveBacklogGrad" x1="0" y1="0" x2="0" y2="1">
@@ -158,7 +188,7 @@ export default function LiveMetrics({ points }: Props) {
             <CartesianGrid strokeDasharray="3 3" stroke={GRID} />
             <XAxis dataKey="t" tickFormatter={fmtTime} tickCount={6} tick={TICK} label={XLABEL} />
             <YAxis tick={TICK} width={65} tickFormatter={v => (v as number).toLocaleString()}
-              label={{ value: 'messages', angle: -90, position: 'insideLeft', offset: 10, fill: '#475569', fontSize: 10 }} />
+              label={{ value: 'messages', angle: -90, position: 'insideLeft', offset: 10, fill: '#94a3b8', fontSize: 12 }} />
             <Tooltip contentStyle={TT_STYLE} labelFormatter={s => `t = ${fmtTime(s as number)}`}
               formatter={v => [(v as number).toLocaleString(), 'backlog']} />
             <Area type="monotone" dataKey="backlog" stroke="#f59e0b" strokeWidth={2}
@@ -169,15 +199,15 @@ export default function LiveMetrics({ points }: Props) {
 
       {/* row 2: latency percentile charts with stats */}
       <div className="grid grid-cols-2 gap-3">
-        <Panel title="Publish latency percentiles" height={220} footer={<StatsRow points={points} which="pub" />}>
+        <Panel title="Publish latency percentiles" height={220} source="omb" footer={<StatsRow points={points} which="pub" />}>
           <LineChart data={points} margin={MARGIN}>
             <CartesianGrid strokeDasharray="3 3" stroke={GRID} />
             <XAxis dataKey="t" tickFormatter={fmtTime} tickCount={6} tick={TICK} label={XLABEL} />
             <YAxis tick={TICK} width={48}
-              label={{ value: 'ms', angle: -90, position: 'insideLeft', offset: 10, fill: '#475569', fontSize: 10 }} />
+              label={{ value: 'ms', angle: -90, position: 'insideLeft', offset: 10, fill: '#94a3b8', fontSize: 12 }} />
             <Tooltip contentStyle={TT_STYLE} labelFormatter={s => `t = ${fmtTime(s as number)}`}
               formatter={(v, n) => [`${v} ms`, n]} />
-            <Legend wrapperStyle={{ fontSize: '10px', color: '#94a3b8', paddingTop: '4px' }} />
+            <Legend wrapperStyle={{ fontSize: '12px', color: '#94a3b8', paddingTop: '4px' }} />
             {LAT_KEYS.map(k => (
               <Line key={k.label} type="monotone" dataKey={k.pub} name={k.label}
                 stroke={k.color} dot={false} strokeWidth={k.label.startsWith('p99') ? 2 : 1.5} connectNulls />
@@ -185,15 +215,15 @@ export default function LiveMetrics({ points }: Props) {
           </LineChart>
         </Panel>
 
-        <Panel title="E2E latency percentiles" height={220} footer={<StatsRow points={points} which="e2e" />}>
+        <Panel title="E2E latency percentiles" height={220} source="omb" footer={<StatsRow points={points} which="e2e" />}>
             <LineChart data={points} margin={MARGIN}>
               <CartesianGrid strokeDasharray="3 3" stroke={GRID} />
               <XAxis dataKey="t" tickFormatter={fmtTime} tickCount={6} tick={TICK} label={XLABEL} />
               <YAxis tick={TICK} width={48}
-                label={{ value: 'ms', angle: -90, position: 'insideLeft', offset: 10, fill: '#475569', fontSize: 10 }} />
+                label={{ value: 'ms', angle: -90, position: 'insideLeft', offset: 10, fill: '#94a3b8', fontSize: 12 }} />
               <Tooltip contentStyle={TT_STYLE} labelFormatter={s => `t = ${fmtTime(s as number)}`}
                 formatter={(v, n) => [`${v} ms`, n]} />
-              <Legend wrapperStyle={{ fontSize: '10px', color: '#94a3b8', paddingTop: '4px' }} />
+              <Legend wrapperStyle={{ fontSize: '12px', color: '#94a3b8', paddingTop: '4px' }} />
               {LAT_KEYS.map(k => (
                 <Line key={k.label} type="monotone" dataKey={k.e2e} name={k.label}
                   stroke={k.color} dot={false} strokeWidth={k.label.startsWith('p99') ? 2 : 1.5} connectNulls />

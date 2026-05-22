@@ -91,6 +91,10 @@ export default function RunDetailPage() {
 
       {run.metrics && (
         <div className="bg-slate-900 border border-slate-700 rounded-lg p-5">
+          <div className="flex items-center gap-2 mb-4">
+            <span className="text-sm font-medium text-slate-300">Latency summary</span>
+            <span className="text-[10px] font-medium px-1.5 py-px rounded uppercase tracking-wide bg-slate-800 text-slate-500 border border-slate-700">OMB</span>
+          </div>
           <LatencyBars metrics={run.metrics} />
         </div>
       )}

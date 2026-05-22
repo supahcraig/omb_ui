@@ -96,7 +96,7 @@ export default function LiveRun({ runId, warmupMinutes, testMinutes, initialElap
       </div>
       <div className="text-xs text-slate-500">{progress.toFixed(0)}% complete</div>
 
-      <LiveMetrics points={points} />
+      <LiveMetrics points={points} warmupSecs={warmupMinutes * 60} />
     </div>
   )
 }

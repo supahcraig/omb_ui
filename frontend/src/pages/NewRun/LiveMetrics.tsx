@@ -1,6 +1,6 @@
 import {
   LineChart, Line, AreaChart, Area,
-  XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
+  XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceArea,
 } from 'recharts'
 
 export interface LivePoint {
@@ -92,11 +92,12 @@ function pctStats(points: LivePoint[], key: keyof LivePoint) {
   return { min, mean, max }
 }
 
-function StatsRow({ points, which }: { points: LivePoint[]; which: 'pub' | 'e2e' }) {
+function StatsRow({ points, which, warmupSecs }: { points: LivePoint[]; which: 'pub' | 'e2e'; warmupSecs: number }) {
+  const testPoints = warmupSecs > 0 ? points.filter(p => p.t >= warmupSecs) : points
   return (
     <div className="mt-3 grid grid-cols-3 gap-2 border-t border-slate-800 pt-2">
       {LAT_KEYS.map(({ label, pub, e2e, color }) => {
-        const s = pctStats(points, which === 'pub' ? pub : e2e)
+        const s = pctStats(testPoints, which === 'pub' ? pub : e2e)
         return (
           <div key={label} className="text-xs">
             <span className="font-semibold" style={{ color }}>{label}</span>
@@ -142,9 +143,14 @@ function Panel({ title, children, footer, height = 160, source }: {
 
 // ── component ────────────────────────────────────────────────────────────────
 
-interface Props { points: LivePoint[] }
+const WARMUP_AREA = (warmupSecs: number) => warmupSecs > 0
+  ? <ReferenceArea x1={0} x2={warmupSecs} fill="#6366f1" fillOpacity={0.07}
+      label={{ value: 'warmup', position: 'insideTopLeft', fill: '#6366f1', fontSize: 10 }} />
+  : null
 
-export default function LiveMetrics({ points }: Props) {
+interface Props { points: LivePoint[]; warmupSecs: number }
+
+export default function LiveMetrics({ points, warmupSecs }: Props) {
   return (
     <div className="space-y-3">
       {/* row 1: throughput msg/s + MB/s + backlog */}
@@ -158,6 +164,7 @@ export default function LiveMetrics({ points }: Props) {
             <Tooltip contentStyle={TT_STYLE} labelFormatter={s => `t = ${fmtTime(s as number)}`}
               formatter={v => [(v as number).toLocaleString(), '']} />
             <Legend wrapperStyle={{ fontSize: '12px', color: '#94a3b8', paddingTop: '4px' }} />
+            {WARMUP_AREA(warmupSecs)}
             <Line type="monotone" dataKey="pubRate"  name="pub rate"  stroke="#6366f1" dot={false} strokeWidth={2} connectNulls />
             <Line type="monotone" dataKey="consRate" name="cons rate" stroke="#10b981" dot={false} strokeWidth={2} connectNulls />
           </LineChart>
@@ -172,6 +179,7 @@ export default function LiveMetrics({ points }: Props) {
             <Tooltip contentStyle={TT_STYLE} labelFormatter={s => `t = ${fmtTime(s as number)}`}
               formatter={v => [`${(v as number).toFixed(1)} MB/s`, '']} />
             <Legend wrapperStyle={{ fontSize: '12px', color: '#94a3b8', paddingTop: '4px' }} />
+            {WARMUP_AREA(warmupSecs)}
             <Line type="monotone" dataKey="pubMBs"  name="pub MB/s"  stroke="#6366f1" dot={false} strokeWidth={2} connectNulls />
             <Line type="monotone" dataKey="consMBs" name="cons MB/s" stroke="#10b981" dot={false} strokeWidth={2} connectNulls />
           </LineChart>
@@ -191,6 +199,7 @@ export default function LiveMetrics({ points }: Props) {
               label={{ value: 'messages', angle: -90, position: 'insideLeft', offset: 10, fill: '#94a3b8', fontSize: 12 }} />
             <Tooltip contentStyle={TT_STYLE} labelFormatter={s => `t = ${fmtTime(s as number)}`}
               formatter={v => [(v as number).toLocaleString(), 'backlog']} />
+            {WARMUP_AREA(warmupSecs)}
             <Area type="monotone" dataKey="backlog" stroke="#f59e0b" strokeWidth={2}
               fill="url(#liveBacklogGrad)" dot={false} connectNulls />
           </AreaChart>
@@ -199,7 +208,7 @@ export default function LiveMetrics({ points }: Props) {
 
       {/* row 2: latency percentile charts with stats */}
       <div className="grid grid-cols-2 gap-3">
-        <Panel title="Publish latency percentiles" height={220} source="omb" footer={<StatsRow points={points} which="pub" />}>
+        <Panel title="Publish latency percentiles" height={220} source="omb" footer={<StatsRow points={points} which="pub" warmupSecs={warmupSecs} />}>
           <LineChart data={points} margin={MARGIN}>
             <CartesianGrid strokeDasharray="3 3" stroke={GRID} />
             <XAxis dataKey="t" tickFormatter={fmtTime} tickCount={6} tick={TICK} label={XLABEL} />
@@ -208,6 +217,7 @@ export default function LiveMetrics({ points }: Props) {
             <Tooltip contentStyle={TT_STYLE} labelFormatter={s => `t = ${fmtTime(s as number)}`}
               formatter={(v, n) => [`${v} ms`, n]} />
             <Legend wrapperStyle={{ fontSize: '12px', color: '#94a3b8', paddingTop: '4px' }} />
+            {WARMUP_AREA(warmupSecs)}
             {LAT_KEYS.map(k => (
               <Line key={k.label} type="monotone" dataKey={k.pub} name={k.label}
                 stroke={k.color} dot={false} strokeWidth={k.label.startsWith('p99') ? 2 : 1.5} connectNulls />
@@ -215,21 +225,22 @@ export default function LiveMetrics({ points }: Props) {
           </LineChart>
         </Panel>
 
-        <Panel title="E2E latency percentiles" height={220} source="omb" footer={<StatsRow points={points} which="e2e" />}>
-            <LineChart data={points} margin={MARGIN}>
-              <CartesianGrid strokeDasharray="3 3" stroke={GRID} />
-              <XAxis dataKey="t" tickFormatter={fmtTime} tickCount={6} tick={TICK} label={XLABEL} />
-              <YAxis tick={TICK} width={48}
-                label={{ value: 'ms', angle: -90, position: 'insideLeft', offset: 10, fill: '#94a3b8', fontSize: 12 }} />
-              <Tooltip contentStyle={TT_STYLE} labelFormatter={s => `t = ${fmtTime(s as number)}`}
-                formatter={(v, n) => [`${v} ms`, n]} />
-              <Legend wrapperStyle={{ fontSize: '12px', color: '#94a3b8', paddingTop: '4px' }} />
-              {LAT_KEYS.map(k => (
-                <Line key={k.label} type="monotone" dataKey={k.e2e} name={k.label}
-                  stroke={k.color} dot={false} strokeWidth={k.label.startsWith('p99') ? 2 : 1.5} connectNulls />
-              ))}
-            </LineChart>
-          </Panel>
+        <Panel title="E2E latency percentiles" height={220} source="omb" footer={<StatsRow points={points} which="e2e" warmupSecs={warmupSecs} />}>
+          <LineChart data={points} margin={MARGIN}>
+            <CartesianGrid strokeDasharray="3 3" stroke={GRID} />
+            <XAxis dataKey="t" tickFormatter={fmtTime} tickCount={6} tick={TICK} label={XLABEL} />
+            <YAxis tick={TICK} width={48}
+              label={{ value: 'ms', angle: -90, position: 'insideLeft', offset: 10, fill: '#94a3b8', fontSize: 12 }} />
+            <Tooltip contentStyle={TT_STYLE} labelFormatter={s => `t = ${fmtTime(s as number)}`}
+              formatter={(v, n) => [`${v} ms`, n]} />
+            <Legend wrapperStyle={{ fontSize: '12px', color: '#94a3b8', paddingTop: '4px' }} />
+            {WARMUP_AREA(warmupSecs)}
+            {LAT_KEYS.map(k => (
+              <Line key={k.label} type="monotone" dataKey={k.e2e} name={k.label}
+                stroke={k.color} dot={false} strokeWidth={k.label.startsWith('p99') ? 2 : 1.5} connectNulls />
+            ))}
+          </LineChart>
+        </Panel>
       </div>
     </div>
   )

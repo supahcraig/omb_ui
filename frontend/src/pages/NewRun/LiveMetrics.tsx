@@ -126,6 +126,8 @@ function Panel({ title, children, footer, height = 160 }: {
 interface Props { points: LivePoint[] }
 
 export default function LiveMetrics({ points }: Props) {
+  const hasE2E = points.some(p => p.e2eP99 != null)
+
   return (
     <div className="space-y-3">
       {/* row 1: throughput + backlog */}
@@ -165,7 +167,7 @@ export default function LiveMetrics({ points }: Props) {
       </div>
 
       {/* row 2: latency percentile charts with stats */}
-      <div className="grid grid-cols-2 gap-3">
+      <div className={`grid gap-3 ${hasE2E ? 'grid-cols-2' : 'grid-cols-1'}`}>
         <Panel title="Publish latency percentiles" height={220} footer={<StatsRow points={points} which="pub" />}>
           <LineChart data={points} margin={MARGIN}>
             <CartesianGrid strokeDasharray="3 3" stroke={GRID} />
@@ -182,21 +184,23 @@ export default function LiveMetrics({ points }: Props) {
           </LineChart>
         </Panel>
 
-        <Panel title="E2E latency percentiles" height={220} footer={<StatsRow points={points} which="e2e" />}>
-          <LineChart data={points} margin={MARGIN}>
-            <CartesianGrid strokeDasharray="3 3" stroke={GRID} />
-            <XAxis dataKey="t" tickFormatter={fmtTime} tickCount={6} tick={TICK} label={XLABEL} />
-            <YAxis tick={TICK} width={48}
-              label={{ value: 'ms', angle: -90, position: 'insideLeft', offset: 10, fill: '#475569', fontSize: 10 }} />
-            <Tooltip contentStyle={TT_STYLE} labelFormatter={s => `t = ${fmtTime(s as number)}`}
-              formatter={(v, n) => [`${v} ms`, n]} />
-            <Legend wrapperStyle={{ fontSize: '10px', color: '#94a3b8', paddingTop: '4px' }} />
-            {LAT_KEYS.map(k => (
-              <Line key={k.label} type="monotone" dataKey={k.e2e} name={k.label}
-                stroke={k.color} dot={false} strokeWidth={k.label.startsWith('p99') ? 2 : 1.5} connectNulls />
-            ))}
-          </LineChart>
-        </Panel>
+        {hasE2E && (
+          <Panel title="E2E latency percentiles" height={220} footer={<StatsRow points={points} which="e2e" />}>
+            <LineChart data={points} margin={MARGIN}>
+              <CartesianGrid strokeDasharray="3 3" stroke={GRID} />
+              <XAxis dataKey="t" tickFormatter={fmtTime} tickCount={6} tick={TICK} label={XLABEL} />
+              <YAxis tick={TICK} width={48}
+                label={{ value: 'ms', angle: -90, position: 'insideLeft', offset: 10, fill: '#475569', fontSize: 10 }} />
+              <Tooltip contentStyle={TT_STYLE} labelFormatter={s => `t = ${fmtTime(s as number)}`}
+                formatter={(v, n) => [`${v} ms`, n]} />
+              <Legend wrapperStyle={{ fontSize: '10px', color: '#94a3b8', paddingTop: '4px' }} />
+              {LAT_KEYS.map(k => (
+                <Line key={k.label} type="monotone" dataKey={k.e2e} name={k.label}
+                  stroke={k.color} dot={false} strokeWidth={k.label.startsWith('p99') ? 2 : 1.5} connectNulls />
+              ))}
+            </LineChart>
+          </Panel>
+        )}
       </div>
     </div>
   )

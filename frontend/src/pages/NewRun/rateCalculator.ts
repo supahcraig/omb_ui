@@ -16,10 +16,10 @@ export interface RateResult {
 }
 
 export function calculateRates(input: RateInput): RateResult {
-  const { producerRate, topics, messageSize, subscriptionsPerTopic,
+  const { producerRate, topics: _topics, messageSize, subscriptionsPerTopic,
     warmupDurationMinutes = 0, testDurationMinutes = 0 } = input
-  const produceMsgPerSec = producerRate * topics
-  const consumeMsgPerSec = produceMsgPerSec * subscriptionsPerTopic
+  const produceMsgPerSec = producerRate
+  const consumeMsgPerSec = producerRate * subscriptionsPerTopic
   return {
     produceMsgPerSec,
     produceMBPerSec: (produceMsgPerSec * messageSize) / 1_048_576,
